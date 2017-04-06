@@ -17,8 +17,6 @@ controller.on('channel_created', function(bot, message) {
 
     request.post({ url: 'https://slack.com/api/users.list', form: { token: process.env.slacktoken} }, function(err, res, body) {
       var bodyjson = eval('(' + body + ')')
-      //var channelid = bodyjson.channel.id;
-      //var members = ['haoyang', 'martina', 'romulo', 'kevin', 'bruce'];
       var members = bodyjson.members
       _.each(members, function(member) {
         request.post({ url: 'https://slack.com/api/channels.invite', form: { token: process.env.slacktokenromulo, channel: message.channel.id, user: member.id} },
@@ -29,33 +27,8 @@ controller.on('channel_created', function(bot, message) {
                   channel: message.channel.id
               }
             );
-
           })
-        /*bot.say(
-          {
-              text: 'The channel ' + message.channel.name + ' was created and ' + member.real_name + ' was invited',
-              channel: 'C4U0W08QP'
-          }
-        );*/
-
       });
-      //request.post({ url: 'https://slack.com/api/channels.setTopic', form: { token: users.haoyang.slacktoken, channel: channelid, topic: purpose } });
-      //request.post({ url: 'https://slack.com/api/channels.setPurpose', form: { token: users.haoyang.slacktoken, channel: channelid, topic: purpose } });
     });
 
   });
-
-// U4T618D26 C4U0W08QP
-//
-/*
-controller.on('ambient',function(bot,message) {
-
-      bot.reply(message,{
-              text: "A more complex response",
-               username: "ReplyBot",
-              icon_emoji: ":dash:",
-      });
-
-})
-
-*/
