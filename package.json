@@ -4,7 +4,9 @@
   "description": "Morpheus Bot helps u to find the path, but only you can walk the path",
   "main": "start.js",
   "dependencies": {
-    "botkit": "^0.5.2"
+    "botkit": "^0.5.2",
+    "lodash": "^4.17.4",
+    "request": "^2.81.0"
   },
   "devDependencies": {},
   "scripts": {
