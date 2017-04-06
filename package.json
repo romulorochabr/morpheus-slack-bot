@@ -1,0 +1,23 @@
+{
+  "name": "morpheus-slack-bot",
+  "version": "1.0.0",
+  "description": "Morpheus Bot helps u to find the path, but only you can walk the path",
+  "main": "start.js",
+  "dependencies": {
+    "botkit": "^0.5.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/romulorochabr/morpheus-slack-bot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/romulorochabr/morpheus-slack-bot/issues"
+  },
+  "homepage": "https://github.com/romulorochabr/morpheus-slack-bot#readme"
+}
