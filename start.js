@@ -3,8 +3,7 @@ var request = require('request')
 var _ = require('lodash')
 
 var controller = Botkit.slackbot({debug: true});
-//process.env.slacktoken = "xoxb-164038557296-rvVqOEvcmULcttMyqmN4BjFJ"
-//process.env.slacktokenromulo = "xoxp-163887310278-163205285074-164611953904-5d6db1043d64cd83bdc3d292948dd6ad"
+
 var bot = controller.spawn({
     token: process.env.slacktoken
 }).startRTM();
