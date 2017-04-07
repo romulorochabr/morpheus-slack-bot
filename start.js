@@ -5,6 +5,7 @@
 // collect remove index                     - DONE
 // collect clean                            - DONE
 // collect help
+// collect move to #channel index ??? // NOT SURE
 
 // todo add "description of todo" [user] [priority]
 // todo list -> list channels todos
@@ -17,15 +18,12 @@
 // IMPROVEMENTS
 // Create functions to save n other things
 // Make the messages beautiful
-// Add a conversation beginning with collect
-
-var Botkit = require('botkit')
-var request = require('request')
-var _ = require('lodash')
-var Store = require("jfs");
-var db = new Store("data",{pretty:true});
-
-var controller = Botkit.slackbot({debug: true});
+    // List - DONE
+    // Others
+// Create conversations starting with collect n todo
+// Create shortcuts for the commands
+// Review the messages
+// Think of collect move to #channel 1
 
 // VERIFY ENV VARIABLES
 if (!process.env.slacktoken) {
@@ -38,6 +36,13 @@ if (!process.env.slacktokenromulo) {
     process.exit(1);
 }
 
+var Botkit = require('botkit')
+var request = require('request')
+var _ = require('lodash')
+var Store = require("jfs");
+var db = new Store("data",{pretty:true});
+
+var controller = Botkit.slackbot({debug: true});
 
 var bot = controller.spawn({
     token: process.env.slacktoken
@@ -72,7 +77,7 @@ controller.on('ambient',function(bot,message) {
               console.log("GET ERROR: " + err)
 
               // initializes the collect store
-              initializeStore(collectStore, function(){
+              initializeStore(collectStore, true, function(){
                 convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
               })
 
@@ -104,7 +109,7 @@ controller.on('ambient',function(bot,message) {
             console.log("GET ERROR: " + err)
 
             // initializes the collect store
-            initializeStore(collectStore, function(){
+            initializeStore(collectStore, true, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
             })
           }else if(collectObjs){
@@ -116,7 +121,7 @@ controller.on('ambient',function(bot,message) {
               var response = ""
               var index = 1;
               _.forEach(collectObjs.open, function(todo) {
-                response += index +'. '+ todo.description + '\n'
+                response += '`' + index + '` ' + todo.description + '\n'
                 index++;
               });
               // FORMAT "text": "*bold* `code` _italic_ ~strike~",
@@ -124,29 +129,29 @@ controller.on('ambient',function(bot,message) {
                     "text": response
                     "mrkdwn": true
                 }*/
-
+              //var timeStampNow = Date
               var formatted=   {
                   "attachments": [
                       {
                           "fallback": "Required plain-text summary of the attachment.",
                           "color": "#36a64f",
-                          "pretext": "Collect list of brilliant ideas",
-                          "title": "Slack API Documentation",
-                          "title_link": "https://api.slack.com/",
-                          "text": "Optional text that appears within the attachment",
-                          "fields": [
-                              {
-                                  "title": "Priority",
-                                  "value": "High",
-                                  "short": false
-                              }
-                          ],
+                          "text" : response,
+                          "title": "Your Brilliant Ideas",
                           "image_url": "http://my-website.com/path/to/image.jpg",
                           "thumb_url": "http://example.com/path/to/thumb.png",
-                          "footer": "Slack API",
+                          "mrkdwn_in": ["text"]
+                      },
+                      {
+                          "fallback": "Required plain-text summary of the attachment.",
+                          "color": "#E0E0E0",
+                          "text" : "You can *manage* your collected _items_ by typing `help`, `list`, `add`, `remove` or `clean`.",
+                          "mrkdwn_in": ["text"]
+                      },
+                      {
+                          "fallback": "Required plain-text summary of the attachment.",
+                          "footer": "Get things done and leave your brain in peace.",
                           "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
-                          "ts": 123456789
-                      }
+                    }
                   ]
               }
               convo.say(formatted)
@@ -178,7 +183,7 @@ controller.on('ambient',function(bot,message) {
             console.log("GET ERROR: " + err)
 
             // initializes the collect store
-            initializeStore(collectStore, function(){
+            initializeStore(collectStore, true, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
             })
           }else if(collectObjs){ //
@@ -207,7 +212,7 @@ controller.on('ambient',function(bot,message) {
 
         sendMessageWIPInConv(convo)
 
-        initializeStore(collectStore, () => {
+        initializeStore(collectStore, true, () => {
           convo.say('The collect store cleaned with success.')
         })
       })
@@ -231,26 +236,9 @@ controller.on('ambient',function(bot,message) {
 // EVENTS HANDLERS
 controller.on('channel_created', function(bot, message) {
 
-  initializeStore(message.channel.id, message.channel.id)
+  initializeStore(message.channel.id, false)
 
-  // TODO - Create a new arrow function to invite all users to a channel
-  request.post({ url: 'https://slack.com/api/users.list', form: { token: process.env.slacktoken} }, function(err, res, body) {
-    var bodyjson = eval('(' + body + ')')
-
-    var members = bodyjson.members
-
-    _.each(members, function(member) {
-      request.post({ url: 'https://slack.com/api/channels.invite', form: { token: process.env.slacktokenromulo, channel: message.channel.id, user: member.id} },
-        function(err, res, body) {
-          bot.say(
-            {
-                text: 'Invinting ' + member.real_name + ' to join the Channel',
-                channel: message.channel.id
-            }
-          );
-        })
-    });
-  });
+  inviteAllUsersToChannel(message.channel.id)
 
 });
 
@@ -273,16 +261,22 @@ var deleteStore = function (storeName, callback){
 }
 
 
-var initializeStore = function (storeName, callback){
-  // TODO - initialize Store according to a type, Collect Store does not need done array
-  var todos = {
+var initializeStore = function (storeName, collectStore, callback){
+  var storage
+  if(collectStore){ // Collect Store does not need done array
+    storage = {
+        "open": []
+      }
+  }else{
+    storage = {
         "open": [],
         "done": []
       }
+  }
 
   // save with custom ID
-  db.save(storeName, todos, function(err){
-    console.log('The store ' + storeName + '.json was initialized with success. ')
+  db.save(storeName, storage, function(err){
+    console.log('The storage ' + storeName + '.json was initialized with success. ')
     if(callback)
       callback()
   });
@@ -291,4 +285,24 @@ var initializeStore = function (storeName, callback){
 
 var sendMessageWIPInConv = function(convo){
   convo.say("Working on your request...")
+}
+
+var inviteAllUsersToChannel = (channelId) => {
+  request.post({ url: 'https://slack.com/api/users.list', form: { token: process.env.slacktoken} }, function(err, res, body) {
+    var bodyjson = eval('(' + body + ')')
+
+    var members = bodyjson.members
+
+    _.each(members, function(member) {
+      request.post({ url: 'https://slack.com/api/channels.invite', form: { token: process.env.slacktokenromulo, channel: channelId, user: member.id} },
+        function(err, res, body) {
+          bot.say(
+            {
+                text: 'Invinting ' + member.real_name + ' to join the Channel',
+                channel: channelId
+            }
+          );
+        })
+    });
+  });
 }
