@@ -119,7 +119,37 @@ controller.on('ambient',function(bot,message) {
                 response += index +'. '+ todo.description + '\n'
                 index++;
               });
-              convo.say(response)
+              // FORMAT "text": "*bold* `code` _italic_ ~strike~",
+             /*  var formatted = {
+                    "text": response
+                    "mrkdwn": true
+                }*/
+
+              var formatted=   {
+                  "attachments": [
+                      {
+                          "fallback": "Required plain-text summary of the attachment.",
+                          "color": "#36a64f",
+                          "pretext": "Collect list of brilliant ideas",
+                          "title": "Slack API Documentation",
+                          "title_link": "https://api.slack.com/",
+                          "text": "Optional text that appears within the attachment",
+                          "fields": [
+                              {
+                                  "title": "Priority",
+                                  "value": "High",
+                                  "short": false
+                              }
+                          ],
+                          "image_url": "http://my-website.com/path/to/image.jpg",
+                          "thumb_url": "http://example.com/path/to/thumb.png",
+                          "footer": "Slack API",
+                          "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
+                          "ts": 123456789
+                      }
+                  ]
+              }
+              convo.say(formatted)
           }
         })
       });
