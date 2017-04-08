@@ -5,6 +5,7 @@
   "main": "start.js",
   "dependencies": {
     "botkit": "^0.5.2",
+    "fs-extra": "^2.1.2",
     "jfs": "^0.2.6",
     "lodash": "^4.17.4",
     "request": "^2.81.0"

@@ -5,7 +5,6 @@
 // collect remove index                     - DONE
 // collect clean                            - DONE
 // collect help
-// collect move to #channel index ??? // NOT SURE
 
 // todo add "description of todo" [user] [priority]     - DONE
 // todo list -> list channels todos                     - DONE
@@ -17,22 +16,26 @@
 // todo unstrike index                                  - DONE
 // todo remove index                                    - DONE
 // todo clean                                           - DONE
+// todo backup - maybe set interval for Backup          - DONE
 // todo prioritize 1,2,3,4,5
 // todo help
-// todo backup - maybe set interval for backup
-
+// Create shortcuts for the commands (todo -ld, todo -a)
+// Install in some computer
 
 // IMPROVEMENTS
-// Verify what can be a function
-// Make the messages beautiful
-    // List - DONE
-    // Others
-// Create conversations starting with collect n todo
-// Create shortcuts for the commands (todo -ld, todo -a)
 // Review the messages to create more friendly msgs
+    // Make the messages beautiful
+      // List - DONE
+      // Others
+// Create confirmations to remove, done and clean
+// Create conversations starting with collect n todo
+// Verify what can be a function
 // Think of collect move to #channel 1
 // Organize by priority 
-// Create list for done, remove, strike and unstrike = done 1,2,3 or strike 1,2,3
+// Assign to - assign 1 to @user
+// Unassign - unassign 1
+// Index list for done, remove, strike and unstrike = done 1,2,3 or strike 1,2,3
+// collect move to #channel index ??? // NOT SURE
 
 // VERIFY ENV VARIABLES
 if (!process.env.slacktoken) {
@@ -45,11 +48,12 @@ if (!process.env.slacktokenadmin) {
     process.exit(1);
 }
 
-var Botkit = require('botkit')
+var Botkit  = require('botkit')
 var request = require('request')
-var _ = require('lodash')
-var Store = require("jfs");
-var db = new Store("data",{pretty:true});
+var _       = require('lodash')
+var Store   = require("jfs");
+var fs    = require('fs-extra')
+var db      = new Store("data",{pretty:true});
 
 var controller = Botkit.slackbot({debug: true});
 
@@ -58,6 +62,7 @@ var bot = controller.spawn({
 }).startRTM();
 
 var collectStore = "collect"
+var changed = false // Allow backup rotine know if it is doing to backup or not
 
 controller.on('ambient',function(bot,message) {
 
@@ -98,9 +103,10 @@ controller.on('ambient',function(bot,message) {
             db.save(collectStore, collectObjs, function(err){
               if(err){
                 convo.say('Hey mate, could you try again there was an error?')
-              }else(
+              }else{
+                changed = true
                 convo.say('Collected with success! New ideia: ' + newCollect.description)
-              )
+              }
             });
 
           }
@@ -206,9 +212,10 @@ controller.on('ambient',function(bot,message) {
             db.save(collectStore, collectObjs, function(err){
               if(err){
                 convo.say('Hey mate, could you try again, please? There was an error...')
-              }else(
+              }else{
                 convo.say('Item removed from collect list with success')
-              )
+                changed = true
+              }
             });
           }
         })
@@ -261,9 +268,10 @@ controller.on('ambient',function(bot,message) {
             db.save(channelStore, todosObj, function(err){
               if(err){
                 convo.say('Hey mate, could you try again there was an error?')
-              }else(
+              }else{
                 convo.say('TODO added with success! New todo: ' + newCollect.description)
-              )
+                changed = true
+              }
             });
 
           }
@@ -504,9 +512,10 @@ controller.on('ambient',function(bot,message) {
             db.save(channelStore, todosObj, function(err){
               if(err){
                 convo.say('Hey mate, could you try again, please? There was an error...')
-              }else(
+              }else{
                 convo.say('Item removed from todo list with success')
-              )
+                changed = true
+              }
             });
           }
         })
@@ -553,9 +562,10 @@ controller.on('ambient',function(bot,message) {
             db.save(channelStore, todosObj, function(err){
               if(err){
                 convo.say('Hey mate, could you try again, please? There was an error...')
-              }else(
+              }else{
                 convo.say('Item unstriked from your todo list with success')
-              )
+                changed = true
+              }
             });
           }
         })
@@ -603,9 +613,10 @@ controller.on('ambient',function(bot,message) {
             db.save(channelStore, todosObj, function(err){
               if(err){
                 convo.say('Hey mate, could you try again, please? There was an error...')
-              }else(
+              }else{
                 convo.say('Item done from  your todo list with success')
-              )
+                changed = true
+              }
             });
           }
         })
@@ -651,9 +662,10 @@ controller.on('ambient',function(bot,message) {
             db.save(channelStore, todosObj, function(err){
               if(err){
                 convo.say('Hey mate, could you try again, please? There was an error...')
-              }else(
+              }else{
                 convo.say('Item done from  your todo list with success')
-              )
+                changed = true
+              }
             });
           }
         })
@@ -665,8 +677,10 @@ controller.on('ambient',function(bot,message) {
         var channelStore = message.channel
         initializeStore(channelStore, false, () => {
           convo.say('The channel store cleaned with success.')
+          changed = true
         })
       })
+
     }else if(message.text.startsWith("todo help")){
       bot.reply(message, "TODO help!")
     }
@@ -695,6 +709,8 @@ var deleteStore = function (storeName, callback){
       console.log(err)
     }else{
       console.log('The store ' + storeName + '.json was deleted with success. ')
+      changed = true
+
       if(callback)
         callback()
     }
@@ -718,6 +734,7 @@ var initializeStore = function (storeName, collectStore, callback){
   // save with custom ID
   db.save(storeName, storage, function(err){
     console.log('The storage ' + storeName + '.json was initialized with success. ')
+    changed = true
     if(callback)
       callback()
   });
@@ -747,3 +764,28 @@ var inviteAllUsersToChannel = (channelId) => {
     });
   });
 }
+
+var backupRoutine = () => {
+  console.log("BACKUP ROUTINE TRIGGERED")
+
+  if(!changed) { 
+    console.log("Nothing changed")
+    return 
+  }
+
+  var date = new Date()
+  var dirDest = 'backup/data/' + Date.now()
+  
+  console.log("BACKUP TO " + dirDest)
+  fs.copy('data/', dirDest, err => {
+    if (err) return console.error(err)
+    console.log("backup done with success!")
+    changed = false // Wait next change to backup again
+  });
+
+}
+
+// Backup routine
+setInterval(backupRoutine, 1,800,000); // every 30 min
+
+
