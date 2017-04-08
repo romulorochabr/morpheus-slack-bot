@@ -7,17 +7,19 @@
 // collect help
 // collect move to #channel index ??? // NOT SURE
 
-// todo add "description of todo" [user] [priority] - DONE
-// todo list -> list channels todos                 - DONE
-// todo list all -> list all todos (open and done)
-// todo list done -> list all todos already DONE    - DONE
-// todo list @user -> filter by user
-// todo done index                                  - DONE
-// todo strike index                                - DONE
-// todo unstrike index                              - DONE
-// todo remove index                                - DONE
-// todo clean                                       - DONE
+// todo add "description of todo" [user] [priority]     - DONE
+// todo list -> list channels todos                     - DONE
+// todo list all -> list all todos (open and done)      - DONE
+// todo list done -> list all todos already DONE        - DONE
+// todo list @user|word -> filter by user or word       - DONE
+// todo done index                                      - DONE
+// todo strike index                                    - DONE
+// todo unstrike index                                  - DONE
+// todo remove index                                    - DONE
+// todo clean                                           - DONE
+// todo prioritize 1,2,3,4,5
 // todo help
+// todo backup - maybe set interval for backup
 
 
 // IMPROVEMENTS
@@ -27,7 +29,7 @@
     // Others
 // Create conversations starting with collect n todo
 // Create shortcuts for the commands (todo -ld, todo -a)
-// Review the messages
+// Review the messages to create more friendly msgs
 // Think of collect move to #channel 1
 // Organize by priority 
 // Create list for done, remove, strike and unstrike = done 1,2,3 or strike 1,2,3
@@ -284,10 +286,6 @@ controller.on('ambient',function(bot,message) {
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){
-            if(todosObj.done.length == 0){
-              convo.say('Hey dude, I havent found any item in your todo list!')
-              return
-            }
               // Send message
               var response = ""
               var index = 1;
@@ -297,6 +295,8 @@ controller.on('ambient',function(bot,message) {
                 response += '`' + index + '` ' + todo.description + '\n'
                 index++;
               });
+              if(_.isEmpty(response))
+                response = 'Hey dude, I havent found any item in your done todo list!'
 
               var formatted=   {
                   "attachments": [
@@ -320,6 +320,85 @@ controller.on('ambient',function(bot,message) {
           }
         })
       });
+    }else if(message.text.startsWith("todo list all")){
+      bot.startConversation(message,function(err,convo) {
+
+        sendMessageWIPInConv(convo)
+
+        // Retrieve the data from collect store
+        var channelStore = message.channel
+
+        db.get(channelStore, function(err, todosObj){
+          if(err){
+            console.log("GET ERROR: " + err)
+
+            // initializes the collect store
+            initializeStore(channelStore, false, function(){
+              convo.say('Hey mate, could you try again, now there is a place to store your todos!')
+            })
+          }else if(todosObj){
+            if(todosObj.open.length == 0 && todosObj.done.length == 0){
+              convo.say('Hey dude, I havent found any item in your todo list!')
+              return
+            }
+              // Send message
+              var responseOpen = ""
+              var responseDone = ""
+              var indexOpen = 1;
+              var indexDone = 1;
+
+              // Creates the list of items
+              _.forEach(todosObj.open, function(todo) {
+                responseOpen += '`' + indexOpen + '` ' + todo.description + '\n'
+                indexOpen++;
+              });
+
+              _.forEach(todosObj.done, function(todo) {
+                responseDone += '`' + indexDone + '` ' + todo.description + '\n'
+                indexDone++;
+              });
+
+              // Confirme if response contains anything
+              if(_.isEmpty(responseOpen))
+                responseOpen = 'Hey dude, I havent found any item in your todo list!'
+              // Confirme if response contains anything
+              if(_.isEmpty(responseDone))
+                responseDone = 'Hey dude, I havent found any item in your done todo list!'
+
+              var formatted=   {
+                  "attachments": [
+                      {
+                          "fallback": "Required plain-text summary of the attachment.",
+                          "color": "#36a64f",
+                          "text" : responseOpen,
+                          "title": "Your List of TODOs",
+                          "image_url": "http://my-website.com/path/to/image.jpg",
+                          "thumb_url": "http://example.com/path/to/thumb.png",
+                          "mrkdwn_in": ["text"]
+                      },
+                      {
+                          "fallback": "Required plain-text summary of the attachment.",
+                          "color": "#ffff33",
+                          "text" : responseDone,
+                          "title": "Your List of DONE TODOs",
+                          "image_url": "http://my-website.com/path/to/image.jpg",
+                          "thumb_url": "http://example.com/path/to/thumb.png",
+                          "mrkdwn_in": ["text"]
+                      },
+                      {
+                          "fallback": "Required plain-text summary of the attachment.",
+                          "color": "#E0E0E0",
+                          "text" : "You can *manage* your todos _items_ by typing `help`, `list [all|done|@user or word]`, `add`, `remove`, `done`, `strike` or `clean`.",
+                          "mrkdwn_in": ["text"],
+                          "footer": "Get things done and leave your brain in peace.",
+                          "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
+                      }
+                  ]
+              }
+              convo.say(formatted)
+          }
+        })
+      });
     }else if(message.text.startsWith("todo list")){
       bot.startConversation(message,function(err,convo) {
 
@@ -337,19 +416,28 @@ controller.on('ambient',function(bot,message) {
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){
-            if(todosObj.open.length == 0){
-              convo.say('Hey dude, I havent found any item in your todo list!')
-              return
-            }
               // Send message
-              var response = ""
+              var response = ''
               var index = 1;
+              //Verifies if there is any parameters to filter by
+              var filter = ''
+              if(message.text.length > 10) // There are addional parameters
+                filter = message.text.substring(10, message.text.length)
 
               // Creates the list of items
               _.forEach(todosObj.open, function(todo) {
-                response += '`' + index + '` ' + todo.description + '\n'
+                if(filter.length > 0){
+                  if(_.includes(todo.description, filter))
+                    response += '`' + index + '` ' + todo.description + '\n'
+                }else{
+                  response += '`' + index + '` ' + todo.description + '\n'
+                }
                 index++;
               });
+
+              // Confirme if response contains anything
+              if(_.isEmpty(response))
+                response = 'Hey dude, I havent found any item in your todo list!'
 
               var formatted=   {
                   "attachments": [
@@ -365,7 +453,7 @@ controller.on('ambient',function(bot,message) {
                       {
                           "fallback": "Required plain-text summary of the attachment.",
                           "color": "#E0E0E0",
-                          "text" : "You can *manage* your todos _items_ by typing `help`, `list [all|done|@user]`, `add`, `remove`, `done`, `strike` or `clean`.",
+                          "text" : "You can *manage* your todos _items_ by typing `help`, `list [all|done|@user or word]`, `add`, `remove`, `done`, `strike` or `clean`.",
                           "mrkdwn_in": ["text"],
                           "footer": "Get things done and leave your brain in peace.",
                           "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
