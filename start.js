@@ -52,17 +52,17 @@ var Botkit  = require('botkit')
 var request = require('request')
 var _       = require('lodash')
 var Store   = require("jfs");
-var fs    = require('fs-extra')
-var db      = new Store("data",{pretty:true});
+var fs      = require('fs-extra')
+var os      = require('os')
 
+var db      = new Store("data",{pretty:true});
 var controller = Botkit.slackbot({debug: true});
+var collectStore = "collect"
+var changed = false // Allow backup rotine know if it is doing to backup or not
 
 var bot = controller.spawn({
     token: process.env.slacktoken
 }).startRTM();
-
-var collectStore = "collect"
-var changed = false // Allow backup rotine know if it is doing to backup or not
 
 controller.on('ambient',function(bot,message) {
 
@@ -85,7 +85,7 @@ controller.on('ambient',function(bot,message) {
           "description": message.text.substring(12, message.text.length)
         }
 
-        // Retrives the values
+        // Retrieves the values
         db.get(collectStore, function(err, collectObjs){
           if(err){
               console.log("GET ERROR: " + err)
@@ -701,6 +701,67 @@ controller.on('channel_deleted', function(bot, message) {
   deleteStore(message.channel)
 });
 
+
+// BOT MESSAGES
+controller.hears(['shutdown'], 'direct_message,direct_mention,mention', function(bot, message) {
+
+    bot.startConversation(message, function(err, convo) {
+
+        convo.ask('Are you sure you want me to shutdown?', [
+            {
+                pattern: bot.utterances.yes,
+                callback: function(response, convo) {
+                    convo.say('Bye!');
+                    convo.next();
+                    setTimeout(function() {
+                        process.exit();
+                    }, 3000);
+                }
+            },
+        {
+            pattern: bot.utterances.no,
+            default: true,
+            callback: function(response, convo) {
+                convo.say('*Phew!*');
+                convo.next();
+            }
+        }
+        ]);
+    });
+});
+
+
+controller.hears(['uptime', 'identify yourself', 'who are you', 'what is your name'],
+    'direct_message,direct_mention,mention', function(bot, message) {
+
+        var hostname = os.hostname();
+        var uptime = formatUptime(process.uptime());
+
+        bot.reply(message,
+            ':robot_face: I am a bot named <@' + bot.identity.name +
+             '>. I have been running for ' + uptime + ' on ' + hostname + '.');
+
+    });
+
+function formatUptime(uptime) {
+    var unit = 'second';
+    if (uptime > 60) {
+        uptime = uptime / 60;
+        unit = 'minute';
+    }
+    if (uptime > 60) {
+        uptime = uptime / 60;
+        unit = 'hour';
+    }
+    if (uptime != 1) {
+        unit = unit + 's';
+    }
+
+    uptime = uptime + ' ' + unit;
+    return uptime;
+}
+
+// FUNCTIONS
 var deleteStore = function (storeName, callback){
   // delete by ID
   db.delete(storeName, function(err){
@@ -786,6 +847,6 @@ var backupRoutine = () => {
 }
 
 // Backup routine
-setInterval(backupRoutine, 1,800,000); // every 30 min
+setInterval(backupRoutine, 1800000); // every 30 min
 
 
