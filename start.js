@@ -7,23 +7,30 @@
 // collect help
 // collect move to #channel index ??? // NOT SURE
 
-// todo add "description of todo" [user] [priority]
-// todo list -> list channels todos
-// todo list all -> list all channels todos
-// todo list done -> list all todos already done
-// todo remove|tick|strike index
-// todo clean
+// todo add "description of todo" [user] [priority] - DONE
+// todo list -> list channels todos                 - DONE
+// todo list all -> list all todos (open and done)
+// todo list done -> list all todos already DONE    - DONE
+// todo list @user -> filter by user
+// todo done index                                  - DONE
+// todo strike index                                - DONE
+// todo unstrike index                              - DONE
+// todo remove index                                - DONE
+// todo clean                                       - DONE
 // todo help
 
+
 // IMPROVEMENTS
-// Create functions to save n other things
+// Verify what can be a function
 // Make the messages beautiful
     // List - DONE
     // Others
 // Create conversations starting with collect n todo
-// Create shortcuts for the commands
+// Create shortcuts for the commands (todo -ld, todo -a)
 // Review the messages
 // Think of collect move to #channel 1
+// Organize by priority 
+// Create list for done, remove, strike and unstrike = done 1,2,3 or strike 1,2,3
 
 // VERIFY ENV VARIABLES
 if (!process.env.slacktoken) {
@@ -31,7 +38,7 @@ if (!process.env.slacktoken) {
     process.exit(1);
 }
 
-if (!process.env.slacktokenromulo) {
+if (!process.env.slacktokenadmin) {
     console.log('Error: Specify admin token in environment');
     process.exit(1);
 }
@@ -120,16 +127,13 @@ controller.on('ambient',function(bot,message) {
               // Send message
               var response = ""
               var index = 1;
+
+              // Creates the list of items
               _.forEach(collectObjs.open, function(todo) {
                 response += '`' + index + '` ' + todo.description + '\n'
                 index++;
               });
-              // FORMAT "text": "*bold* `code` _italic_ ~strike~",
-             /*  var formatted = {
-                    "text": response
-                    "mrkdwn": true
-                }*/
-              //var timeStampNow = Date
+
               var formatted=   {
                   "attachments": [
                       {
@@ -218,14 +222,363 @@ controller.on('ambient',function(bot,message) {
       })
     }else if(message.text.startsWith("collect help")){
       bot.reply(message, "New TODO added!")
+    
     }else if(message.text.startsWith("todo add")){
-      bot.reply(message, "New TODO added!")
+      bot.startConversation(message,function(err,convo) {
+
+        sendMessageWIPInConv(convo)
+        // Validates the message
+        var data = message.text.split(' ')
+        if(message.text.length <= 8){ // >= "todo add " = 8 characters
+          // Send validation message
+          convo.say('Sorry bro, but your message should be like todo add "description of your todo" [@user] [priority ****]')
+          return
+        }
+
+        // Creates new obj
+        var newCollect = {
+          "description": message.text.substring(8, message.text.length)
+        }
+
+        // Retrives the values
+        var channelStore = message.channel
+        db.get(channelStore, function(err, todosObj){
+          if(err){
+              console.log("GET ERROR: " + err)
+
+              // initializes the collect store
+              initializeStore(channelStore, false, function(){
+                convo.say('Hey mate, could you try again, now there is a place to store your todos!')
+              })
+
+          }else if(todosObj){ //
+            // Add a new ideia
+            todosObj.open.push(newCollect) // Add new collect to store
+
+            // Save file
+            db.save(channelStore, todosObj, function(err){
+              if(err){
+                convo.say('Hey mate, could you try again there was an error?')
+              }else(
+                convo.say('TODO added with success! New todo: ' + newCollect.description)
+              )
+            });
+
+          }
+        })
+      })
+      
+    }else if(message.text.startsWith("todo list done")){
+      bot.startConversation(message,function(err,convo) {
+
+        sendMessageWIPInConv(convo)
+
+        // Retrieve the data from collect store
+        var channelStore = message.channel
+        db.get(channelStore, function(err, todosObj){
+          if(err){
+            console.log("GET ERROR: " + err)
+
+            // initializes the collect store
+            initializeStore(channelStore, false, function(){
+              convo.say('Hey mate, could you try again, now there is a place to store your todos!')
+            })
+          }else if(todosObj){
+            if(todosObj.done.length == 0){
+              convo.say('Hey dude, I havent found any item in your todo list!')
+              return
+            }
+              // Send message
+              var response = ""
+              var index = 1;
+
+              // Creates the list of items
+              _.forEach(todosObj.done, function(todo) {
+                response += '`' + index + '` ' + todo.description + '\n'
+                index++;
+              });
+
+              var formatted=   {
+                  "attachments": [
+                      {
+                          "fallback": "Required plain-text summary of the attachment.",
+                          "color": "#ffff33",
+                          "text" : response,
+                          "title": "Your List of DONE TODOs",
+                          "image_url": "http://my-website.com/path/to/image.jpg",
+                          "thumb_url": "http://example.com/path/to/thumb.png",
+                          "mrkdwn_in": ["text"]
+                      },
+                      {
+                          "fallback": "Required plain-text summary of the attachment.",
+                          "footer": "Get things done and leave your brain in peace.",
+                          "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
+                    }
+                  ]
+              }
+              convo.say(formatted)
+          }
+        })
+      });
     }else if(message.text.startsWith("todo list")){
-      bot.reply(message, "List of TODOs")
+      bot.startConversation(message,function(err,convo) {
+
+        sendMessageWIPInConv(convo)
+
+        // Retrieve the data from collect store
+        var channelStore = message.channel
+
+        db.get(channelStore, function(err, todosObj){
+          if(err){
+            console.log("GET ERROR: " + err)
+
+            // initializes the collect store
+            initializeStore(channelStore, false, function(){
+              convo.say('Hey mate, could you try again, now there is a place to store your todos!')
+            })
+          }else if(todosObj){
+            if(todosObj.open.length == 0){
+              convo.say('Hey dude, I havent found any item in your todo list!')
+              return
+            }
+              // Send message
+              var response = ""
+              var index = 1;
+
+              // Creates the list of items
+              _.forEach(todosObj.open, function(todo) {
+                response += '`' + index + '` ' + todo.description + '\n'
+                index++;
+              });
+
+              var formatted=   {
+                  "attachments": [
+                      {
+                          "fallback": "Required plain-text summary of the attachment.",
+                          "color": "#36a64f",
+                          "text" : response,
+                          "title": "Your List of TODOs",
+                          "image_url": "http://my-website.com/path/to/image.jpg",
+                          "thumb_url": "http://example.com/path/to/thumb.png",
+                          "mrkdwn_in": ["text"]
+                      },
+                      {
+                          "fallback": "Required plain-text summary of the attachment.",
+                          "color": "#E0E0E0",
+                          "text" : "You can *manage* your todos _items_ by typing `help`, `list [all|done|@user]`, `add`, `remove`, `done`, `strike` or `clean`.",
+                          "mrkdwn_in": ["text"],
+                          "footer": "Get things done and leave your brain in peace.",
+                          "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
+                      }
+                  ]
+              }
+              convo.say(formatted)
+          }
+        })
+      });
     }else if(message.text.startsWith("todo remove")){
-      bot.reply(message, "Remove TODO")
+      bot.startConversation(message,function(err,convo) {
+
+        sendMessageWIPInConv(convo)
+
+        // Validate the data
+        var data = message.text.split(' ')
+        if(data.length <= 2){
+          // Send validation message
+          convo.say('Sorry bro, but your message should be like "todo remove 1" (u can see the index using "todo list")')
+          return
+        }else if((_.toInteger(data[2])) <= 0){ // the third parameter have to be an index
+          convo.say('Sorry bro, but you should include the number to remove, like this "todo remove 1" (u can see the index using "todo list")')
+          return
+        }
+
+        // Retrieve the data from collect store
+        var channelStore = message.channel
+        db.get(channelStore, function(err, todosObj){
+          if(err){
+            console.log("GET ERROR: " + err)
+
+            // initializes the collect store
+            initializeStore(channelStore, false, function(){
+              convo.say('Hey mate, could you try again, now there is a place to store your todos!')
+            })
+          }else if(todosObj){ //
+            var index = _.toInteger(data[2])
+            if(index > todosObj.open.length){
+              convo.say('Hey mate, sorry but this item was not found! Please have a look at "todo list"')
+              return
+            }
+
+            // Remove based on the index
+            todosObj.open.splice(index-1, 1);
+
+            // Save file
+            db.save(channelStore, todosObj, function(err){
+              if(err){
+                convo.say('Hey mate, could you try again, please? There was an error...')
+              }else(
+                convo.say('Item removed from todo list with success')
+              )
+            });
+          }
+        })
+      })
+    }else if(message.text.startsWith("todo unstrike")){
+      bot.startConversation(message,function(err,convo) {
+
+        sendMessageWIPInConv(convo)
+
+        // Validate the data
+        var data = message.text.split(' ')
+        if(data.length <= 2){
+          // Send validation message
+          convo.say('Sorry bro, but your message should be like "todo unstrike 1" (u can see the index using "todo list")')
+          return
+        }else if((_.toInteger(data[2])) <= 0){ // the third parameter have to be an index
+          convo.say('Sorry bro, but you should include the number to complete, like this "todo unstrike 1" (u can see the index using "todo list")')
+          return
+        }
+
+        // Retrieve the data from collect store
+        var channelStore = message.channel
+        db.get(channelStore, function(err, todosObj){
+          if(err){
+            console.log("GET ERROR: " + err)
+
+            // initializes the collect store
+            initializeStore(channelStore, false, function(){
+              convo.say('Hey mate, could you try again, now there is a place to store your todos!')
+            })
+          }else if(todosObj){ //
+            var index = _.toInteger(data[2])
+            if(index > todosObj.open.length){
+              convo.say('Hey mate, sorry but this item was not found! Please have a look at "todo list"')
+              return
+            }
+
+            // Strike based on the index
+            var obj = todosObj.open[index -1] 
+            obj.description = _.replace(obj.description, new RegExp('~', 'g'), '')
+            todosObj.open[index -1] = obj
+
+            // Save file
+            db.save(channelStore, todosObj, function(err){
+              if(err){
+                convo.say('Hey mate, could you try again, please? There was an error...')
+              }else(
+                convo.say('Item unstriked from your todo list with success')
+              )
+            });
+          }
+        })
+      })
+    }else if(message.text.startsWith("todo strike")){
+      bot.startConversation(message,function(err,convo) {
+
+        sendMessageWIPInConv(convo)
+
+        // Validate the data
+        var data = message.text.split(' ')
+        if(data.length <= 2){
+          // Send validation message
+          convo.say('Sorry bro, but your message should be like "todo strike 1" (u can see the index using "todo list")')
+          return
+        }else if((_.toInteger(data[2])) <= 0){ // the third parameter have to be an index
+          convo.say('Sorry bro, but you should include the number to complete, like this "todo strike 1" (u can see the index using "todo list")')
+          return
+        }
+
+        // Retrieve the data from collect store
+        var channelStore = message.channel
+        db.get(channelStore, function(err, todosObj){
+          if(err){
+            console.log("GET ERROR: " + err)
+
+            // initializes the collect store
+            initializeStore(channelStore, false, function(){
+              convo.say('Hey mate, could you try again, now there is a place to store your todos!')
+            })
+          }else if(todosObj){ //
+            var index = _.toInteger(data[2])
+            if(index > todosObj.open.length){
+              convo.say('Hey mate, sorry but this item was not found! Please have a look at "todo list"')
+              return
+            }
+
+            // Strike based on the index
+            var obj = todosObj.open[index -1] 
+            obj.description = '~' + obj.description + '~'
+            console.log("DESCRIPTION: " + obj.description)
+            todosObj.open[index -1] = obj
+
+            // Save file
+            db.save(channelStore, todosObj, function(err){
+              if(err){
+                convo.say('Hey mate, could you try again, please? There was an error...')
+              }else(
+                convo.say('Item done from  your todo list with success')
+              )
+            });
+          }
+        })
+      })
+    }else if(message.text.startsWith("todo done")){
+      bot.startConversation(message,function(err,convo) {
+
+        sendMessageWIPInConv(convo)
+
+        // Validate the data
+        var data = message.text.split(' ')
+        if(data.length <= 2){
+          // Send validation message
+          convo.say('Sorry bro, but your message should be like "todo done 1" (u can see the index using "todo list")')
+          return
+        }else if((_.toInteger(data[2])) <= 0){ // the third parameter have to be an index
+          convo.say('Sorry bro, but you should include the number to complete, like this "todo done 1" (u can see the index using "todo list")')
+          return
+        }
+
+        // Retrieve the data from collect store
+        var channelStore = message.channel
+        db.get(channelStore, function(err, todosObj){
+          if(err){
+            console.log("GET ERROR: " + err)
+
+            // initializes the collect store
+            initializeStore(channelStore, false, function(){
+              convo.say('Hey mate, could you try again, now there is a place to store your todos!')
+            })
+          }else if(todosObj){ //
+            var index = _.toInteger(data[2])
+            if(index > todosObj.open.length){
+              convo.say('Hey mate, sorry but this item was not found! Please have a look at "todo list"')
+              return
+            }
+
+            // Remove based on the index
+            todosObj.done.push(todosObj.open[index-1])
+            todosObj.open.splice(index-1, 1);
+
+            // Save file
+            db.save(channelStore, todosObj, function(err){
+              if(err){
+                convo.say('Hey mate, could you try again, please? There was an error...')
+              }else(
+                convo.say('Item done from  your todo list with success')
+              )
+            });
+          }
+        })
+      })
     }else if(message.text.startsWith("todo clean")){
-      bot.reply(message, "TODOs cleaned!")
+      bot.startConversation(message,function(err,convo) {
+
+        sendMessageWIPInConv(convo)
+        var channelStore = message.channel
+        initializeStore(channelStore, false, () => {
+          convo.say('The channel store cleaned with success.')
+        })
+      })
     }else if(message.text.startsWith("todo help")){
       bot.reply(message, "TODO help!")
     }
@@ -294,7 +647,7 @@ var inviteAllUsersToChannel = (channelId) => {
     var members = bodyjson.members
 
     _.each(members, function(member) {
-      request.post({ url: 'https://slack.com/api/channels.invite', form: { token: process.env.slacktokenromulo, channel: channelId, user: member.id} },
+      request.post({ url: 'https://slack.com/api/channels.invite', form: { token: process.env.slacktokenadmin, channel: channelId, user: member.id} },
         function(err, res, body) {
           bot.say(
             {
