@@ -1,11 +1,13 @@
 // IMPLEMENTATION
 
+// COLLECT
 // collect add "description of the insight" - DONE
 // collect list -> Retrives the ideas       - DONE
 // collect remove index                     - DONE
 // collect clean                            - DONE
 // collect help
 
+// TODOs
 // todo add "description of todo" [user] [priority]     - DONE
 // todo list -> list channels todos                     - DONE
 // todo list all -> list all todos (open and done)      - DONE
@@ -19,15 +21,19 @@
 // todo backup - maybe set interval for Backup          - DONE
 // todo prioritize 1,2,3,4,5
 // todo help
+
+// GENERAL
 // Create shortcuts for the commands (todo -ld, todo -a)
 // Install in some computer
+// Initialize Store only when error is file not found.
+// Create confirmations to remove, done and clean
+// Use Promises (Begin with getStore())
 
 // IMPROVEMENTS
 // Review the messages to create more friendly msgs
     // Make the messages beautiful
       // List - DONE
       // Others
-// Create confirmations to remove, done and clean
 // Create conversations starting with collect n todo
 // Verify what can be a function
 // Think of collect move to #channel 1
@@ -107,7 +113,7 @@ controller.on('ambient',function(bot,message) {
                 changed = true
                 convo.say('Collected with success! New ideia: ' + newCollect.description)
               }
-            });
+            })
 
           }
         })
@@ -285,6 +291,7 @@ controller.on('ambient',function(bot,message) {
 
         // Retrieve the data from collect store
         var channelStore = message.channel
+        // TODO - Refactor creating a method to return the store
         db.get(channelStore, function(err, todosObj){
           if(err){
             console.log("GET ERROR: " + err)
@@ -301,8 +308,8 @@ controller.on('ambient',function(bot,message) {
               // Creates the list of items
               _.forEach(todosObj.done, function(todo) {
                 response += '`' + index + '` ' + todo.description + '\n'
-                index++;
-              });
+                index++
+              })
               if(_.isEmpty(response))
                 response = 'Hey dude, I havent found any item in your done todo list!'
 
@@ -358,13 +365,13 @@ controller.on('ambient',function(bot,message) {
               // Creates the list of items
               _.forEach(todosObj.open, function(todo) {
                 responseOpen += '`' + indexOpen + '` ' + todo.description + '\n'
-                indexOpen++;
-              });
+                indexOpen++
+              })
 
               _.forEach(todosObj.done, function(todo) {
                 responseDone += '`' + indexDone + '` ' + todo.description + '\n'
-                indexDone++;
-              });
+                indexDone++
+              })
 
               // Confirme if response contains anything
               if(_.isEmpty(responseOpen))
@@ -426,7 +433,7 @@ controller.on('ambient',function(bot,message) {
           }else if(todosObj){
               // Send message
               var response = ''
-              var index = 1;
+              var index = 1
               //Verifies if there is any parameters to filter by
               var filter = ''
               if(message.text.length > 10) // There are addional parameters
@@ -440,7 +447,7 @@ controller.on('ambient',function(bot,message) {
                 }else{
                   response += '`' + index + '` ' + todo.description + '\n'
                 }
-                index++;
+                index++
               });
 
               // Confirme if response contains anything
@@ -680,6 +687,90 @@ controller.on('ambient',function(bot,message) {
           changed = true
         })
       })
+    }else if(message.text.startsWith("todo prioritize")){
+      // Create a converstation
+      bot.startConversation(message, function(err, convo) {
+        var regComma = new RegExp('^(?!,)(,?[0-9]+)+$')
+        var regSpace = new RegExp('^(?!,)(\\s?[0-9]+)+$')
+        
+        // create a path for when a user says YES
+        /*convo.addMessage({
+                text: 'You said yes! How wonderful.',
+        },'yes_thread')*/
+
+        // TODO - Gather the list and send pretty message
+
+        convo.say('This is the current list!')
+
+        convo.ask('What is the new one?', [
+            {
+                pattern: 'done',
+                callback: function(response, convo) {
+                    // since no further messages are queued after this,
+                    // the conversation will end naturally with status == 'completed'
+                    convo.next();
+                }
+            },
+            {
+                pattern: regComma,
+                callback: function(response, convo) {
+                    // since no further messages are queued after this,
+                    // the conversation will end naturally with status == 'completed'
+
+                    // TODO - Verify repeting number, not allowed = 2,3,3,4,4
+                    // TODO - Verify if any number is out of range = 54,1,2,3
+
+                    convo.say('YEAH Comma')
+                    convo.next();
+                }
+            },
+            {
+                pattern: regSpace,
+                callback: function(response, convo) {
+                    // since no further messages are queued after this,
+                    // the conversation will end naturally with status == 'completed'
+                    convo.say('YEAH Space')
+                    convo.next();
+                }
+            },
+            {
+                default: true,
+                callback: function(response, convo) {
+                    convo.repeat();
+                    convo.next();
+                }
+            }
+        ]);
+
+        // Handling the end of the conversation
+        convo.on('end', function(convo) {
+            if (convo.status == 'completed') {
+                bot.reply(message, 'Everthing sorted out!')
+            } else {
+                // this happens if the conversation ended prematurely for some reason
+                bot.reply(message, 'OK, if you need me again just call me!')
+            }
+        });
+
+
+        convo.activate()
+    })
+      // Gather the list of todos
+      
+      // Set the theards
+        // Present the list of todos
+        // Ask a question about the new prioritization list and give the options to stop (done)
+          // Veririfies the response
+            // If correct list 1 2 3 4 55 ... save according
+              // Send a message informing
+            // If wrong message were sent
+              // Explain what they have to send
+              // Ask the question again
+
+
+      
+
+      // Activate the conversation
 
     }else if(message.text.startsWith("todo help")){
       bot.reply(message, "TODO help!")
