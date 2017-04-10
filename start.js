@@ -62,7 +62,7 @@ var changed = false // Allow backup rotine know if it is doing to backup or not
 
 var bot = controller.spawn({
     token: process.env.slacktoken
-}).startRTM();
+})
 
 controller.on('ambient',function(bot,message) {
 
@@ -845,6 +845,23 @@ var backupRoutine = () => {
   });
 
 }
+
+// Feature to start and take care of stale connections
+function start_rtm() {
+	bot.startRTM(function(err,bot,payload) {
+		if (err) {
+				console.log('Failed to start RTM')
+				return setTimeout(start_rtm, 60000)
+		}
+		console.log("RTM started!")
+	})
+}
+controller.on('rtm_close', function(bot, err) {
+		console.log("RTM CLOSED : " + err)
+		console.log("Trying to restart")
+        start_rtm()
+})
+start_rtm()
 
 // Backup routine
 setInterval(backupRoutine, 1800000); // every 30 min
