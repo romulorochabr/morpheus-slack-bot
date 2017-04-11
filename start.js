@@ -1,47 +1,4 @@
-// IMPLEMENTATION
 
-// COLLECT
-// collect add "description of the insight" - DONE
-// collect list -> Retrives the ideas       - DONE
-// collect remove index                     - DONE
-// collect clean                            - DONE
-// collect help
-
-// TODOs
-// todo add "description of todo" [user] [priority]     - DONE
-// todo list -> list channels todos                     - DONE
-// todo list all -> list all todos (open and done)      - DONE
-// todo list done -> list all todos already DONE        - DONE
-// todo list @user|word -> filter by user or word       - DONE
-// todo done index                                      - DONE
-// todo strike index                                    - DONE
-// todo unstrike index                                  - DONE
-// todo remove index                                    - DONE
-// todo clean                                           - DONE
-// todo backup - maybe set interval for Backup          - DONE
-// todo prioritize 1,2,3,4,5
-// todo help
-
-// GENERAL
-// Create shortcuts for the commands (todo -ld, todo -a)
-// Install in some computer
-// Initialize Store only when error is file not found.
-// Create confirmations to remove, done and clean
-// Use Promises (Begin with getStore())
-
-// IMPROVEMENTS
-// Review the messages to create more friendly msgs
-    // Make the messages beautiful
-      // List - DONE
-      // Others
-// Create conversations starting with collect n todo
-// Verify what can be a function
-// Think of collect move to #channel 1
-// Organize by priority 
-// Assign to - assign 1 to @user
-// Unassign - unassign 1
-// Index list for done, remove, strike and unstrike = done 1,2,3 or strike 1,2,3
-// collect move to #channel index ??? // NOT SURE
 
 // VERIFY ENV VARIABLES
 if (!process.env.slacktoken) {
@@ -61,10 +18,15 @@ var Store   = require("jfs");
 var fs      = require('fs-extra')
 var os      = require('os')
 
+
 var db      = new Store("data",{pretty:true});
 var controller = Botkit.slackbot({debug: true});
 var collectStore = "collect"
 var changed = false // Allow backup rotine know if it is doing to backup or not
+
+// Regex Validation
+var regComma = new RegExp('^(?!,)(,?[0-9]+)+$')
+var regSpace = new RegExp('^(?!,)(\\s?[0-9]+)+$')
 
 var bot = controller.spawn({
     token: process.env.slacktoken
@@ -179,18 +141,22 @@ controller.on('ambient',function(bot,message) {
 
 
 
-    }else if(message.text.startsWith("collect remove")){
+    }else if(message.text.startsWith("collect remove ")){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
 
         // Validate the data
-        var data = message.text.split(' ')
-        if(data.length <= 2){
+        if(message.text.length <= 15){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "collect remove 1" (u can see the index using "collect list" message)')
           return
-        }else if((_.toInteger(data[2])) <= 0){ // the third parameter have to be an index
+
+        }
+
+        var data = message.text.substring(15, message.text.length) // Get the data after the command, eliminates the space
+        var indexes = validateRangeOfNumber(data)
+        if(indexes == null){ // the third parameter have to be an index
           convo.say('Sorry bro, but you should include the number to remove, like this "collect remove 1" (u can see the index using "collect list" message)')
           return
         }
@@ -199,20 +165,27 @@ controller.on('ambient',function(bot,message) {
         db.get(collectStore, function(err, collectObjs){
           if(err){
             console.log("GET ERROR: " + err)
-
             // initializes the collect store
             initializeStore(collectStore, true, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
             })
           }else if(collectObjs){ //
-            var index = _.toInteger(data[2])
-            if(index > collectObjs.open.length){
-              convo.say('Hey mate, sorry but this item was not found! Please have a look at "collect list"')
-              return
-            }
 
-            // Remove based on the index
-            collectObjs.open.splice(index-1, 1);
+            // sort the collection from higher to lower
+            var revertedIndexes = _.chain(indexes.map(Number))
+                                      .uniq()
+                                      .sortBy()
+                                      .value()
+                                      .reverse()
+
+            // Iterate throuht objects to remove
+            _.forEach(revertedIndexes, function(index) {
+              console.log("Excluding " + index);
+              if(index > 0 && index <= collectObjs.open.length){
+                console.log('Excluding index: ' + index)
+                collectObjs.open.splice(index-1, 1)
+              }
+            });
 
             // Save file
             db.save(collectStore, collectObjs, function(err){
@@ -237,7 +210,7 @@ controller.on('ambient',function(bot,message) {
       })
     }else if(message.text.startsWith("collect help")){
       bot.reply(message, "New TODO added!")
-    
+
     }else if(message.text.startsWith("todo add")){
       bot.startConversation(message,function(err,convo) {
 
@@ -283,7 +256,7 @@ controller.on('ambient',function(bot,message) {
           }
         })
       })
-      
+
     }else if(message.text.startsWith("todo list done")){
       bot.startConversation(message,function(err,convo) {
 
@@ -561,7 +534,7 @@ controller.on('ambient',function(bot,message) {
             }
 
             // Strike based on the index
-            var obj = todosObj.open[index -1] 
+            var obj = todosObj.open[index -1]
             obj.description = _.replace(obj.description, new RegExp('~', 'g'), '')
             todosObj.open[index -1] = obj
 
@@ -611,7 +584,7 @@ controller.on('ambient',function(bot,message) {
             }
 
             // Strike based on the index
-            var obj = todosObj.open[index -1] 
+            var obj = todosObj.open[index -1]
             obj.description = '~' + obj.description + '~'
             console.log("DESCRIPTION: " + obj.description)
             todosObj.open[index -1] = obj
@@ -690,9 +663,8 @@ controller.on('ambient',function(bot,message) {
     }else if(message.text.startsWith("todo prioritize")){
       // Create a converstation
       bot.startConversation(message, function(err, convo) {
-        var regComma = new RegExp('^(?!,)(,?[0-9]+)+$')
-        var regSpace = new RegExp('^(?!,)(\\s?[0-9]+)+$')
-        
+
+
         // create a path for when a user says YES
         /*convo.addMessage({
                 text: 'You said yes! How wonderful.',
@@ -756,7 +728,7 @@ controller.on('ambient',function(bot,message) {
         convo.activate()
     })
       // Gather the list of todos
-      
+
       // Set the theards
         // Present the list of todos
         // Ask a question about the new prioritization list and give the options to stop (done)
@@ -768,7 +740,7 @@ controller.on('ambient',function(bot,message) {
               // Ask the question again
 
 
-      
+
 
       // Activate the conversation
 
@@ -853,6 +825,17 @@ function formatUptime(uptime) {
 }
 
 // FUNCTIONS
+var validateRangeOfNumber = value => {
+  console.log("VALIDATE " + value)
+  console.log(value.split(' '))
+  if(regComma.test(value))
+    return value.split(',')
+  if(regSpace.test(value))
+    return value.trim().split(' ')
+
+  return null;
+}
+
 var deleteStore = function (storeName, callback){
   // delete by ID
   db.delete(storeName, function(err){
@@ -920,14 +903,14 @@ var inviteAllUsersToChannel = (channelId) => {
 var backupRoutine = () => {
   console.log("BACKUP ROUTINE TRIGGERED")
 
-  if(!changed) { 
+  if(!changed) {
     console.log("Nothing changed")
-    return 
+    return
   }
 
   var date = new Date()
   var dirDest = 'backup/data/' + Date.now()
-  
+
   console.log("BACKUP TO " + dirDest)
   fs.copy('data/', dirDest, err => {
     if (err) return console.error(err)
@@ -939,5 +922,3 @@ var backupRoutine = () => {
 
 // Backup routine
 setInterval(backupRoutine, 1800000); // every 30 min
-
-
