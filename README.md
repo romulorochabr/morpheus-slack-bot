@@ -9,10 +9,10 @@ BOT
   Think about Listening from bot or create a /command
 
 COLLECT
-// Remove list of items - collect remove 1,2,3,4 or 1 2 3 4
+// Remove list of items - collect remove 1,2,3,4 or 1 2 3 4 - DONE
 
 // TODOs
-// Remove list of items - todo remove 1,2,3,4 or 1 2 3 4
+// Remove list of items - todo remove 1,2,3,4 or 1 2 3 4    - DONE
 // Done list of items - todo remove 1,2,3,4 or 1 2 3 4
 // Strike list of items - todo remove 1,2,3,4 or 1 2 3 4
 // Unstrike list of items - todo remove 1,2,3,4 or 1 2 3 4
@@ -20,7 +20,7 @@ COLLECT
 
 IMPROVEMENTS
 // Module for OS code
-
+// Use constants for the commands
 
 // RELEASE 0.3
 

@@ -452,18 +452,23 @@ controller.on('ambient',function(bot,message) {
           }
         })
       });
-    }else if(message.text.startsWith("todo remove")){
+    }else if(message.text.startsWith("todo remove ")){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
-
         // Validate the data
-        var data = message.text.split(' ')
-        if(data.length <= 2){
+        if(message.text.length <= "todo remove ".length){
           // Send validation message
-          convo.say('Sorry bro, but your message should be like "todo remove 1" (u can see the index using "todo list")')
+          convo.say('Sorry bro, but you should include the number to remove, like this "todo remove 1" (u can see the index using "todo list")')
           return
-        }else if((_.toInteger(data[2])) <= 0){ // the third parameter have to be an index
+
+        }
+
+        var data = message.text.substring("todo remove ".length, message.text.length) // Get the data after the command, eliminates the space
+        console.log("DATA: " + data)
+        var indexes = validateRangeOfNumber(data)
+        if(indexes == null){ // the third parameter have to be an index
+          console.log("Indexes null")
           convo.say('Sorry bro, but you should include the number to remove, like this "todo remove 1" (u can see the index using "todo list")')
           return
         }
@@ -479,14 +484,23 @@ controller.on('ambient',function(bot,message) {
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){ //
-            var index = _.toInteger(data[2])
-            if(index > todosObj.open.length){
-              convo.say('Hey mate, sorry but this item was not found! Please have a look at "todo list"')
-              return
-            }
 
-            // Remove based on the index
-            todosObj.open.splice(index-1, 1);
+            // sort the collection from higher to lower
+            var revertedIndexes = _.chain(indexes.map(Number))
+                                      .uniq()
+                                      .sortBy()
+                                      .value()
+                                      .reverse()
+
+            // Iterate throuht objects to remove
+            console.log("Reverted index: " + revertedIndexes)
+            _.forEach(revertedIndexes, function(index) {
+              console.log("Excluding " + index);
+              if(index > 0 && index <= todosObj.open.length){
+                console.log('Excluding index: ' + index)
+                todosObj.open.splice(index-1, 1)
+              }
+            });
 
             // Save file
             db.save(channelStore, todosObj, function(err){
@@ -602,6 +616,7 @@ controller.on('ambient',function(bot,message) {
         })
       })
     }else if(message.text.startsWith("todo done")){
+        /*
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
@@ -649,7 +664,70 @@ controller.on('ambient',function(bot,message) {
             });
           }
         })
+      }) */
+
+      bot.startConversation(message,function(err,convo) {
+
+        sendMessageWIPInConv(convo)
+        // Validate the data
+        if(message.text.length <= "todo done ".length){
+          // Send validation message
+          convo.say('Sorry bro, but your message should be like "todo done 1" (u can see the index using "todo list")')
+          return
+        }
+
+        var data = message.text.substring("todo done ".length, message.text.length) // Get the data after the command, eliminates the space
+        console.log("DATA: " + data)
+        var indexes = validateRangeOfNumber(data)
+        if(indexes == null){ // the third parameter have to be an index
+          console.log("Indexes null")
+          convo.say('Sorry bro, but your message should be like "todo done 1" (u can see the index using "todo list")')
+          return
+        }
+
+        // Retrieve the data from collect store
+        var channelStore = message.channel
+        db.get(channelStore, function(err, todosObj){
+          if(err){
+            console.log("GET ERROR: " + err)
+
+            // initializes the collect store
+            initializeStore(channelStore, false, function(){
+              convo.say('Hey mate, could you try again, now there is a place to store your todos!')
+            })
+          }else if(todosObj){ //
+
+            // sort the collection from higher to lower
+            var revertedIndexes = _.chain(indexes.map(Number))
+                                      .uniq()
+                                      .sortBy()
+                                      .value()
+                                      .reverse()
+
+            // Iterate throuht objects to remove
+            console.log("Reverted index: " + revertedIndexes)
+            _.forEach(revertedIndexes, function(index) {
+              console.log("Doneing " + index);
+              if(index > 0 && index <= todosObj.open.length){
+                console.log('Doneing index: ' + index)
+                todosObj.done.push(todosObj.open[index-1])
+                todosObj.open.splice(index-1, 1);
+              }
+            });
+
+            // Save file
+            db.save(channelStore, todosObj, function(err){
+              if(err){
+                convo.say('Hey mate, could you try again, please? There was an error...')
+              }else{
+                convo.say('Item done from todo list with success')
+                changed = true
+              }
+            });
+          }
+        })
       })
+
     }else if(message.text.startsWith("todo clean")){
       bot.startConversation(message,function(err,convo) {
 
