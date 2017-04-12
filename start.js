@@ -514,19 +514,23 @@ controller.on('ambient',function(bot,message) {
           }
         })
       })
-    }else if(message.text.startsWith("todo unstrike")){
+    }else if(message.text.startsWith("todo unstrike ")){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
-
         // Validate the data
-        var data = message.text.split(' ')
-        if(data.length <= 2){
+        if(message.text.length <= "todo unstrike ".length){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "todo unstrike 1" (u can see the index using "todo list")')
           return
-        }else if((_.toInteger(data[2])) <= 0){ // the third parameter have to be an index
-          convo.say('Sorry bro, but you should include the number to complete, like this "todo unstrike 1" (u can see the index using "todo list")')
+        }
+
+        var data = message.text.substring("todo unstrike ".length, message.text.length) // Get the data after the command, eliminates the space
+        console.log("DATA: " + data)
+        var indexes = validateRangeOfNumber(data)
+        if(indexes == null){ // the third parameter have to be an index
+          console.log("Indexes null")
+          convo.say('Sorry bro, but your message should be like "todo unstrike 1" (u can see the index using "todo list")')
           return
         }
 
@@ -541,42 +545,56 @@ controller.on('ambient',function(bot,message) {
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){ //
-            var index = _.toInteger(data[2])
-            if(index > todosObj.open.length){
-              convo.say('Hey mate, sorry but this item was not found! Please have a look at "todo list"')
-              return
-            }
 
-            // Strike based on the index
-            var obj = todosObj.open[index -1]
-            obj.description = _.replace(obj.description, new RegExp('~', 'g'), '')
-            todosObj.open[index -1] = obj
+            // sort the collection from higher to lower
+            var revertedIndexes = _.chain(indexes.map(Number))
+                                      .uniq()
+                                      .sortBy()
+                                      .value()
+                                      .reverse()
+
+            // Iterate throuht objects to remove
+            console.log("Reverted index: " + revertedIndexes)
+            _.forEach(revertedIndexes, function(index) {
+              console.log("Unstriking " + index);
+              if(index > 0 && index <= todosObj.open.length){
+                console.log('Unstriking index: ' + index)
+                var obj = todosObj.open[index -1]
+                obj.description = _.replace(obj.description, new RegExp('~', 'g'), '')
+                todosObj.open[index -1] = obj
+              }
+            });
 
             // Save file
             db.save(channelStore, todosObj, function(err){
               if(err){
                 convo.say('Hey mate, could you try again, please? There was an error...')
               }else{
-                convo.say('Item unstriked from your todo list with success')
+                convo.say('Item Unstrike from todo list with success')
                 changed = true
               }
             });
           }
         })
       })
-    }else if(message.text.startsWith("todo strike")){
+
+    }else if(message.text.startsWith("todo strike ")){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
-
         // Validate the data
-        var data = message.text.split(' ')
-        if(data.length <= 2){
+        if(message.text.length <= "todo strike ".length){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "todo strike 1" (u can see the index using "todo list")')
           return
-        }else if((_.toInteger(data[2])) <= 0){ // the third parameter have to be an index
-          convo.say('Sorry bro, but you should include the number to complete, like this "todo strike 1" (u can see the index using "todo list")')
+        }
+
+        var data = message.text.substring("todo strike ".length, message.text.length) // Get the data after the command, eliminates the space
+        console.log("DATA: " + data)
+        var indexes = validateRangeOfNumber(data)
+        if(indexes == null){ // the third parameter have to be an index
+          console.log("Indexes null")
+          convo.say('Sorry bro, but your message should be like "todo strike 1" (u can see the index using "todo list")')
           return
         }
 
@@ -591,80 +609,40 @@ controller.on('ambient',function(bot,message) {
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){ //
-            var index = _.toInteger(data[2])
-            if(index > todosObj.open.length){
-              convo.say('Hey mate, sorry but this item was not found! Please have a look at "todo list"')
-              return
-            }
 
-            // Strike based on the index
-            var obj = todosObj.open[index -1]
-            obj.description = '~' + obj.description + '~'
-            console.log("DESCRIPTION: " + obj.description)
-            todosObj.open[index -1] = obj
+            // sort the collection from higher to lower
+            var revertedIndexes = _.chain(indexes.map(Number))
+                                      .uniq()
+                                      .sortBy()
+                                      .value()
+                                      .reverse()
+
+            // Iterate throuht objects to remove
+            console.log("Reverted index: " + revertedIndexes)
+            _.forEach(revertedIndexes, function(index) {
+              console.log("Striking " + index);
+              if(index > 0 && index <= todosObj.open.length){
+                console.log('Striking index: ' + index)
+                var obj = todosObj.open[index -1]
+                obj.description = '~' + obj.description + '~'
+                todosObj.open[index -1] = obj
+              }
+            });
 
             // Save file
             db.save(channelStore, todosObj, function(err){
               if(err){
                 convo.say('Hey mate, could you try again, please? There was an error...')
               }else{
-                convo.say('Item done from  your todo list with success')
+                convo.say('Item strike from todo list with success')
                 changed = true
               }
             });
           }
         })
       })
+    
     }else if(message.text.startsWith("todo done")){
-        /*
-      bot.startConversation(message,function(err,convo) {
-
-        sendMessageWIPInConv(convo)
-
-        // Validate the data
-        var data = message.text.split(' ')
-        if(data.length <= 2){
-          // Send validation message
-          convo.say('Sorry bro, but your message should be like "todo done 1" (u can see the index using "todo list")')
-          return
-        }else if((_.toInteger(data[2])) <= 0){ // the third parameter have to be an index
-          convo.say('Sorry bro, but you should include the number to complete, like this "todo done 1" (u can see the index using "todo list")')
-          return
-        }
-
-        // Retrieve the data from collect store
-        var channelStore = message.channel
-        db.get(channelStore, function(err, todosObj){
-          if(err){
-            console.log("GET ERROR: " + err)
-
-            // initializes the collect store
-            initializeStore(channelStore, false, function(){
-              convo.say('Hey mate, could you try again, now there is a place to store your todos!')
-            })
-          }else if(todosObj){ //
-            var index = _.toInteger(data[2])
-            if(index > todosObj.open.length){
-              convo.say('Hey mate, sorry but this item was not found! Please have a look at "todo list"')
-              return
-            }
-
-            // Remove based on the index
-            todosObj.done.push(todosObj.open[index-1])
-            todosObj.open.splice(index-1, 1);
-
-            // Save file
-            db.save(channelStore, todosObj, function(err){
-              if(err){
-                convo.say('Hey mate, could you try again, please? There was an error...')
-              }else{
-                convo.say('Item done from  your todo list with success')
-                changed = true
-              }
-            });
-          }
-        })
-      }) */
 
       bot.startConversation(message,function(err,convo) {
 

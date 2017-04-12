@@ -13,9 +13,9 @@ COLLECT
 
 // TODOs
 // Remove list of items - todo remove 1,2,3,4 or 1 2 3 4    - DONE
-// Done list of items - todo remove 1,2,3,4 or 1 2 3 4
-// Strike list of items - todo remove 1,2,3,4 or 1 2 3 4
-// Unstrike list of items - todo remove 1,2,3,4 or 1 2 3 4
+// Done list of items - todo remove 1,2,3,4 or 1 2 3 4      - DONE
+// Strike list of items - todo remove 1,2,3,4 or 1 2 3 4    - DONE
+// Unstrike list of items - todo remove 1,2,3,4 or 1 2 3 4  - DONE
 // todo prioritize 1,2,3,4,5
 
 IMPROVEMENTS
