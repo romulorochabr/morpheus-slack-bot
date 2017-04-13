@@ -15,8 +15,7 @@ var Botkit  = require('botkit')
 var request = require('request')
 var _       = require('lodash')
 var Store   = require("jfs");
-var fs      = require('fs-extra')
-var os      = require('os')
+var mos     = require('./modules/morpheus-os.js')
 
 
 var db      = new Store("data",{pretty:true});
@@ -866,33 +865,9 @@ controller.hears(['shutdown'], 'direct_message,direct_mention,mention', function
 
 controller.hears(['uptime', 'identify yourself', 'who are you', 'what is your name'],
     'direct_message,direct_mention,mention', function(bot, message) {
-
-        var hostname = os.hostname();
-        var uptime = formatUptime(process.uptime());
-
-        bot.reply(message,
-            ':robot_face: I am a bot named <@' + bot.identity.name +
-             '>. I have been running for ' + uptime + ' on ' + hostname + '.');
-
+        mos.uptime(bot, message)
     });
 
-function formatUptime(uptime) {
-    var unit = 'second';
-    if (uptime > 60) {
-        uptime = uptime / 60;
-        unit = 'minute';
-    }
-    if (uptime > 60) {
-        uptime = uptime / 60;
-        unit = 'hour';
-    }
-    if (uptime != 1) {
-        unit = unit + 's';
-    }
-
-    uptime = uptime + ' ' + unit;
-    return uptime;
-}
 
 // FUNCTIONS
 var validateRangeOfNumber = value => {
@@ -970,25 +945,10 @@ var inviteAllUsersToChannel = (channelId) => {
   });
 }
 
-var backupRoutine = () => {
-  console.log("BACKUP ROUTINE TRIGGERED")
-
-  if(!changed) {
-    console.log("Nothing changed")
-    return
-  }
-
-  var date = new Date()
-  var dirDest = 'backup/data/' + Date.now()
-
-  console.log("BACKUP TO " + dirDest)
-  fs.copy('data/', dirDest, err => {
-    if (err) return console.error(err)
-    console.log("backup done with success!")
-    changed = false // Wait next change to backup again
-  });
-
-}
-
 // Backup routine
-setInterval(backupRoutine, 1800000); // every 30 min
+setInterval(function(){
+  if(changed){
+    mos.backupRoutine()
+    changed = false // Stops backing up until next change
+  }
+}, 1800000); // every 30 min
