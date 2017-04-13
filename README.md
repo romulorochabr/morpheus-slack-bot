@@ -16,11 +16,11 @@ COLLECT
 // Done list of items - todo remove 1,2,3,4 or 1 2 3 4      - DONE
 // Strike list of items - todo remove 1,2,3,4 or 1 2 3 4    - DONE
 // Unstrike list of items - todo remove 1,2,3,4 or 1 2 3 4  - DONE
-// todo prioritize 1,2,3,4,5
+// todo prioritize 1,2,3,4,5                                - DONE
 
 IMPROVEMENTS
 // Module for OS code
-// Use constants for the commands
+// Use constants for the commands                           - DONE
 
 // RELEASE 0.3
 
@@ -51,7 +51,6 @@ IMPROVEMENTS
 // todo unstrike index                                  - DONE
 // todo remove index                                    - DONE
 // todo clean                                           - DONE
-// todo backup - maybe set interval for Backup          - DONE
 // todo help
 
 ######## LIST OF IMPROVEMENTS - BACKLOG #####

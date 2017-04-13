@@ -23,6 +23,25 @@ var db      = new Store("data",{pretty:true});
 var controller = Botkit.slackbot({debug: true});
 var collectStore = "collect"
 var changed = false // Allow backup rotine know if it is doing to backup or not
+var COMMANDS = {
+    collectList     : 'collect list',
+    collectAdd      : 'collect add',
+    collectRemove   : 'collect remove',
+    collectClean    : 'collect clean',
+    collectHelp     : 'collect help',
+
+    todoList        : 'todo list',
+    todoListAll     : 'todo list all',
+    todoListDone    : 'todo list done',
+    todoAdd         : 'todo add',
+    todoRemove      : 'todo remove',
+    todoClean       : 'todo clean',
+    todoStrike      : 'todo strike',
+    todoUnstrike    : 'todo unstrike',
+    todoDone        : 'todo done',
+    todoPrioritize  : 'todo prioritize',
+    todoHelp        : 'todo help'
+}
 
 // Regex Validation
 var regComma = new RegExp('^(?!,)(,?[0-9]+)+$')
@@ -35,14 +54,13 @@ var bot = controller.spawn({
 controller.on('ambient',function(bot,message) {
 
     // COLLECT ACTIONS
-    if(message.text.startsWith("collect add")){ // COLLECT ADD
+    if(message.text.startsWith(COMMANDS.collectAdd)){ // COLLECT ADD
 
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
         // Validates the message
-        var data = message.text.split(' ')
-        if(message.text.length <= 12){ // >= "collect add " = 12 characters
+        if(message.text.length <= (COMMANDS.collectAdd.length+1)){ // >= "collect add " = 12 characters
           // Send validation message
           convo.say('Sorry bro, but your message should be like collect add "description of your todo" [@user] [priority ****]')
           return
@@ -50,7 +68,7 @@ controller.on('ambient',function(bot,message) {
 
         // Creates new obj
         var newCollect = {
-          "description": message.text.substring(12, message.text.length)
+          "description": message.text.substring(COMMANDS.collectAdd.length+1, message.text.length)
         }
 
         // Retrieves the values
@@ -81,7 +99,7 @@ controller.on('ambient',function(bot,message) {
         })
       })
 
-    }else if(message.text.startsWith("collect list")){
+    }else if(message.text.startsWith(COMMANDS.collectList)){
 
       bot.startConversation(message,function(err,convo) {
 
@@ -141,20 +159,20 @@ controller.on('ambient',function(bot,message) {
 
 
 
-    }else if(message.text.startsWith("collect remove ")){
+    }else if(message.text.startsWith(COMMANDS.collectRemove)){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
 
         // Validate the data
-        if(message.text.length <= 15){
+        if(message.text.length <= (COMMANDS.collectRemove.length+1)){ // collect remove
           // Send validation message
           convo.say('Sorry bro, but your message should be like "collect remove 1" (u can see the index using "collect list" message)')
           return
 
         }
 
-        var data = message.text.substring(15, message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring((COMMANDS.collectRemove.length+1), message.text.length) // Get the data after the command, eliminates the space
         var indexes = validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
           convo.say('Sorry bro, but you should include the number to remove, like this "collect remove 1" (u can see the index using "collect list" message)')
@@ -199,7 +217,7 @@ controller.on('ambient',function(bot,message) {
           }
         })
       })
-    }else if(message.text.startsWith("collect clean")){
+    }else if(message.text.startsWith(COMMANDS.collectClean)){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
@@ -208,16 +226,16 @@ controller.on('ambient',function(bot,message) {
           convo.say('The collect store cleaned with success.')
         })
       })
-    }else if(message.text.startsWith("collect help")){
+    }else if(message.text.startsWith(COMMANDS.collectHelp)){
       bot.reply(message, "New TODO added!")
 
-    }else if(message.text.startsWith("todo add")){
+    }else if(message.text.startsWith(COMMANDS.todoAdd)){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
         // Validates the message
         var data = message.text.split(' ')
-        if(message.text.length <= 8){ // >= "todo add " = 8 characters
+        if(message.text.length <= (COMMANDS.todoAdd+1)){ // >= "todo add " = 9 characters
           // Send validation message
           convo.say('Sorry bro, but your message should be like todo add "description of your todo" [@user] [priority ****]')
           return
@@ -225,7 +243,7 @@ controller.on('ambient',function(bot,message) {
 
         // Creates new obj
         var newCollect = {
-          "description": message.text.substring(8, message.text.length)
+          "description": message.text.substring((COMMANDS.todoAdd+1), message.text.length)
         }
 
         // Retrives the values
@@ -257,7 +275,7 @@ controller.on('ambient',function(bot,message) {
         })
       })
 
-    }else if(message.text.startsWith("todo list done")){
+    }else if(message.text.startsWith(COMMANDS.todoListDone)){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
@@ -308,7 +326,7 @@ controller.on('ambient',function(bot,message) {
           }
         })
       });
-    }else if(message.text.startsWith("todo list all")){
+    }else if(message.text.startsWith((COMMANDS.todoListAll))){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
@@ -387,7 +405,7 @@ controller.on('ambient',function(bot,message) {
           }
         })
       });
-    }else if(message.text.startsWith("todo list")){
+    }else if(message.text.startsWith((COMMANDS.todoList))){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
@@ -452,19 +470,19 @@ controller.on('ambient',function(bot,message) {
           }
         })
       });
-    }else if(message.text.startsWith("todo remove ")){
+    }else if(message.text.startsWith(COMMANDS.todoRemove)){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
         // Validate the data
-        if(message.text.length <= "todo remove ".length){
+        if(message.text.length <= (COMMANDS.todoRemove.length+1)){
           // Send validation message
           convo.say('Sorry bro, but you should include the number to remove, like this "todo remove 1" (u can see the index using "todo list")')
           return
 
         }
 
-        var data = message.text.substring("todo remove ".length, message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring( (COMMANDS.todoRemove.length+1), message.text.length) // Get the data after the command, eliminates the space
         console.log("DATA: " + data)
         var indexes = validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
@@ -514,18 +532,18 @@ controller.on('ambient',function(bot,message) {
           }
         })
       })
-    }else if(message.text.startsWith("todo unstrike ")){
+    }else if(message.text.startsWith(COMMANDS.todoUnstrike)){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
         // Validate the data
-        if(message.text.length <= "todo unstrike ".length){
+        if(message.text.length <= (COMMANDS.todoUnstrike.length+1)){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "todo unstrike 1" (u can see the index using "todo list")')
           return
         }
 
-        var data = message.text.substring("todo unstrike ".length, message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring((COMMANDS.todoUnstrike.length+1), message.text.length) // Get the data after the command, eliminates the space
         console.log("DATA: " + data)
         var indexes = validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
@@ -578,18 +596,18 @@ controller.on('ambient',function(bot,message) {
         })
       })
 
-    }else if(message.text.startsWith("todo strike ")){
+    }else if(message.text.startsWith(COMMANDS.todoStrike)){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
         // Validate the data
-        if(message.text.length <= "todo strike ".length){
+        if(message.text.length <= (COMMANDS.todoStrike.length+1)){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "todo strike 1" (u can see the index using "todo list")')
           return
         }
 
-        var data = message.text.substring("todo strike ".length, message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring((COMMANDS.todoStrike.length+1), message.text.length) // Get the data after the command, eliminates the space
         console.log("DATA: " + data)
         var indexes = validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
@@ -641,19 +659,19 @@ controller.on('ambient',function(bot,message) {
           }
         })
       })
-    }else if(message.text.startsWith("todo done ")){
+    }else if(message.text.startsWith(COMMANDS.todoDone)){
 
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
         // Validate the data
-        if(message.text.length <= "todo done ".length){
+        if(message.text.length <= (COMMANDS.todoDone.length+1)){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "todo done 1" (u can see the index using "todo list")')
           return
         }
 
-        var data = message.text.substring("todo done ".length, message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring((COMMANDS.todoDone.length+1), message.text.length) // Get the data after the command, eliminates the space
         console.log("DATA: " + data)
         var indexes = validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
@@ -705,7 +723,7 @@ controller.on('ambient',function(bot,message) {
         })
       })
 
-    }else if(message.text.startsWith("todo clean")){
+    }else if(message.text.startsWith(COMMANDS.todoClean)){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
@@ -715,18 +733,18 @@ controller.on('ambient',function(bot,message) {
           changed = true
         })
       })
-    }else if(message.text.startsWith("todo prioritize")){
+    }else if(message.text.startsWith(COMMANDS.todoPrioritize)){
       bot.startConversation(message,function(err,convo) {
 
         sendMessageWIPInConv(convo)
         // Validate the data
-        if(message.text.length <= "todo prioritize ".length){
+        if(message.text.length <= (COMMANDS.todoPrioritize.length +1)){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "todo prioritize 5,1,3," (u can see the index using "todo list")')
           return
         }
 
-        var data = message.text.substring("todo prioritize ".length, message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring((COMMANDS.todoPrioritize.length +1), message.text.length) // Get the data after the command, eliminates the space
         console.log("DATA: " + data)
         var indexes = validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
@@ -796,7 +814,7 @@ controller.on('ambient',function(bot,message) {
         })
       })
 
-    }else if(message.text.startsWith("todo help")){
+    }else if(message.text.startsWith(COMMANDS.todoHelp)){
       bot.reply(message, "TODO help!")
     }
 
