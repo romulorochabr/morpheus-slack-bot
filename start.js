@@ -641,8 +641,7 @@ controller.on('ambient',function(bot,message) {
           }
         })
       })
-    
-    }else if(message.text.startsWith("todo done")){
+    }else if(message.text.startsWith("todo done ")){
 
       bot.startConversation(message,function(err,convo) {
 
@@ -717,88 +716,85 @@ controller.on('ambient',function(bot,message) {
         })
       })
     }else if(message.text.startsWith("todo prioritize")){
-      // Create a converstation
-      bot.startConversation(message, function(err, convo) {
+      bot.startConversation(message,function(err,convo) {
 
+        sendMessageWIPInConv(convo)
+        // Validate the data
+        if(message.text.length <= "todo prioritize ".length){
+          // Send validation message
+          convo.say('Sorry bro, but your message should be like "todo prioritize 5,1,3," (u can see the index using "todo list")')
+          return
+        }
 
-        // create a path for when a user says YES
-        /*convo.addMessage({
-                text: 'You said yes! How wonderful.',
-        },'yes_thread')*/
+        var data = message.text.substring("todo prioritize ".length, message.text.length) // Get the data after the command, eliminates the space
+        console.log("DATA: " + data)
+        var indexes = validateRangeOfNumber(data)
+        if(indexes == null){ // the third parameter have to be an index
+          console.log("Indexes null")
+          convo.say('Sorry bro, but your message should be like "todo doprioritizene 1" (u can see the index using "todo list")')
+          return
+        }
 
-        // TODO - Gather the list and send pretty message
+        // Retrieve the data from collect store
+        var channelStore = message.channel
+        db.get(channelStore, function(err, todosObj){
+          if(err){
+            console.log("GET ERROR: " + err)
 
-        convo.say('This is the current list!')
+            // initializes the collect store
+            initializeStore(channelStore, false, function(){
+              convo.say('Hey mate, could you try again, now there is a place to store your todos!')
+            })
+          }else if(todosObj){ //
 
-        convo.ask('What is the new one?', [
-            {
-                pattern: 'done',
-                callback: function(response, convo) {
-                    // since no further messages are queued after this,
-                    // the conversation will end naturally with status == 'completed'
-                    convo.next();
-                }
-            },
-            {
-                pattern: regComma,
-                callback: function(response, convo) {
-                    // since no further messages are queued after this,
-                    // the conversation will end naturally with status == 'completed'
+            // sort the collection from higher to lower
+            var orderedIndexes = _.chain(indexes.map(Number))
+                                      .uniq()
+                                      .value()
 
-                    // TODO - Verify repeting number, not allowed = 2,3,3,4,4
-                    // TODO - Verify if any number is out of range = 54,1,2,3
+            // Iterate throuht objects to remove
+            console.log("Ordered index: ")
+            console.log(revertedIndexes)
+            var oldList = Array.from(todosObj.open)
+            todosObj.open = []
+            _.forEach(orderedIndexes, function(index) {
+              console.log("Prioritizing " + index)
+              if(index > 0 && index <= oldList.length){
+                console.log('prioritizing index: ' + index)
+                todosObj.open.push(oldList[index-1])
+              }
+            })
+            // Remove indexes already prioritized
+            var revertedIndexes = _.chain(orderedIndexes)
+                                        .sortBy()
+                                        .value()
+                                        .reverse()
 
-                    convo.say('YEAH Comma')
-                    convo.next();
-                }
-            },
-            {
-                pattern: regSpace,
-                callback: function(response, convo) {
-                    // since no further messages are queued after this,
-                    // the conversation will end naturally with status == 'completed'
-                    convo.say('YEAH Space')
-                    convo.next();
-                }
-            },
-            {
-                default: true,
-                callback: function(response, convo) {
-                    convo.repeat();
-                    convo.next();
-                }
-            }
-        ]);
+            console.log('Filtering by already added')
+            var lastingArrays = oldList.filter(function(obj, index){
+              index++
+              if(orderedIndexes.indexOf(index) > -1)
+                return false
+              else
+                return true
+            });
 
-        // Handling the end of the conversation
-        convo.on('end', function(convo) {
-            if (convo.status == 'completed') {
-                bot.reply(message, 'Everthing sorted out!')
-            } else {
-                // this happens if the conversation ended prematurely for some reason
-                bot.reply(message, 'OK, if you need me again just call me!')
-            }
-        });
+            _.forEach(lastingArrays, function(obj) {
+              todosObj.open.push(obj)
+            })
 
-
-        convo.activate()
-    })
-      // Gather the list of todos
-
-      // Set the theards
-        // Present the list of todos
-        // Ask a question about the new prioritization list and give the options to stop (done)
-          // Veririfies the response
-            // If correct list 1 2 3 4 55 ... save according
-              // Send a message informing
-            // If wrong message were sent
-              // Explain what they have to send
-              // Ask the question again
-
-
-
-
-      // Activate the conversation
+            // Save file
+            db.save(channelStore, todosObj, function(err){
+              if(err){
+                convo.say('Hey mate, could you try again, please? There was an error...')
+              }else{
+                convo.say('Item prioritized from todo list with success')
+                changed = true
+              }
+            });
+          }
+        })
+      })
 
     }else if(message.text.startsWith("todo help")){
       bot.reply(message, "TODO help!")
