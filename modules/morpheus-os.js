@@ -12,6 +12,55 @@ var morpheusos =  {
 
   },
 
+  shutdown: (bot , message) => {
+    bot.startConversation(message, function(err, convo) {
+
+        convo.ask('Are you sure you want me to shutdown?', [
+            {
+                pattern: bot.utterances.yes,
+                callback: function(response, convo) {
+                    convo.say('Bye!')
+                    convo.next()
+                    setTimeout(function() {
+                        process.exit()
+                    }, 3000)
+                }
+            },
+        {
+            pattern: bot.utterances.no,
+            default: true,
+            callback: function(response, convo) {
+                convo.say('*Phew!*')
+                convo.next()
+            }
+        }
+        ])
+    })
+  },
+
+  startBackupRoutine : () => {
+    setInterval(function(){
+      if(changed){
+        morpheusos.backup()
+        changed = false // Stops backing up until next change
+      }
+    }, 1800000); // every 30 min
+  },
+
+  backup : () => {
+    console.log("BACKUP ROUTINE TRIGGERED")
+
+    var date = new Date()
+    var dirDest = 'backup/data/' + Date.now()
+
+    console.log("BACKUP TO " + dirDest)
+    fs.copy('data/', dirDest, err => {
+      if (err) return console.error(err)
+      console.log("backup done with success!")
+    });
+
+  },
+
   formatUpTime : uptime => {
       var unit = 'second';
       if (uptime > 60) {
@@ -28,20 +77,6 @@ var morpheusos =  {
 
       uptime = uptime + ' ' + unit;
       return uptime;
-  },
-
-  backupRoutine : () => {
-    console.log("BACKUP ROUTINE TRIGGERED")
-
-    var date = new Date()
-    var dirDest = 'backup/data/' + Date.now()
-
-    console.log("BACKUP TO " + dirDest)
-    fs.copy('data/', dirDest, err => {
-      if (err) return console.error(err)
-      console.log("backup done with success!")
-    });
-
   }
 }
 

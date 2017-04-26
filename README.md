@@ -6,7 +6,18 @@ Morpheus Bot helps u to find the path, but only you can walk the path
 
 BOT
 // Listening messages
-  Think about Listening from bot or create a /command
+  Morpheus hearing the messages
+    Collect COMMANDS                                         
+      List                                                  - DONE
+      Add                                                   - DONE     
+      Remove                                                - DONE
+      Clean                                                 - DONE      
+    Todo COMMANDS
+    Validation to identify channel
+  Migrate Shutdown to morpheus-os                           - DONE
+  Migrate Back to morpheus-os                               - DONE
+  Create modules                                            - DONE
+
 
 COLLECT
 // Remove list of items - collect remove 1,2,3,4 or 1 2 3 4 - DONE
@@ -19,17 +30,20 @@ COLLECT
 // todo prioritize 1,2,3,4,5                                - DONE
 
 IMPROVEMENTS
-// Module for OS code
+// Module for OS                                            - DONE
 // Use constants for the commands                           - DONE
 
 // RELEASE 0.3
 
 IMPROVEMENTS
-// Code in Modules
+// Code in Modules (collect and todo)
 // Code using Promises
-// Code using conversations starting with collect and todo
-
-
+// Code using conversations starting with collect and todo direct messages to morpheus
+      Start a conversation and boot show the channels and from that do the commands
+      Design the conversation between morpheus and the person
+        collect -> Start a conversation
+        todo -> Ask firtly for the channels
+        both could start a conversation if some part of the command is lacking
 
 // RELEASE 0.1
 

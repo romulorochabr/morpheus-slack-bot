@@ -12,39 +12,16 @@ if (!process.env.slacktokenadmin) {
 }
 
 var Botkit  = require('botkit')
-var request = require('request')
 var _       = require('lodash')
 var Store   = require("jfs");
 var mos     = require('./modules/morpheus-os.js')
-
+var mosColl = require('./modules/morpheus-collect.js')
+var mosStore = require('./modules/morpheus-store.js')
+var mosCommon = require('./modules/morpheus-common.js')
 
 var db      = new Store("data",{pretty:true});
 var controller = Botkit.slackbot({debug: true});
-var collectStore = "collect"
 var changed = false // Allow backup rotine know if it is doing to backup or not
-var COMMANDS = {
-    collectList     : 'collect list',
-    collectAdd      : 'collect add',
-    collectRemove   : 'collect remove',
-    collectClean    : 'collect clean',
-    collectHelp     : 'collect help',
-
-    todoList        : 'todo list',
-    todoListAll     : 'todo list all',
-    todoListDone    : 'todo list done',
-    todoAdd         : 'todo add',
-    todoRemove      : 'todo remove',
-    todoClean       : 'todo clean',
-    todoStrike      : 'todo strike',
-    todoUnstrike    : 'todo unstrike',
-    todoDone        : 'todo done',
-    todoPrioritize  : 'todo prioritize',
-    todoHelp        : 'todo help'
-}
-
-// Regex Validation
-var regComma = new RegExp('^(?!,)(,?[0-9]+)+$')
-var regSpace = new RegExp('^(?!,)(\\s?[0-9]+)+$')
 
 var bot = controller.spawn({
     token: process.env.slacktoken
@@ -53,188 +30,28 @@ var bot = controller.spawn({
 controller.on('ambient',function(bot,message) {
 
     // COLLECT ACTIONS
-    if(message.text.startsWith(COMMANDS.collectAdd)){ // COLLECT ADD
+    if(message.text.startsWith(mosCommon.COMMANDS.collectAdd)){
+      mosColl.collectAdd(bot , message, db)
 
+    }else if(message.text.startsWith(mosCommon.COMMANDS.collectList)){
+      mosColl.collectList(bot, message, db)
+
+    }else if(message.text.startsWith(mosCommon.COMMANDS.collectRemove)){
+      mosColl.collectRemove(bot, message, db)
+
+    }else if(message.text.startsWith(mosCommon.COMMANDS.collectClean)){
+      mosColl.collectClean(bot, message, db)
+
+    }else if(message.text.startsWith(mosCommon.COMMANDS.collectHelp)){
+      mosColl.collectHelp(bot, message, db)
+
+    }else if(message.text.startsWith(mosCommon.COMMANDS.todoAdd)){
       bot.startConversation(message,function(err,convo) {
 
-        sendMessageWIPInConv(convo)
-        // Validates the message
-        if(message.text.length <= (COMMANDS.collectAdd.length+1)){ // >= "collect add " = 12 characters
-          // Send validation message
-          convo.say('Sorry bro, but your message should be like collect add "description of your todo" [@user] [priority ****]')
-          return
-        }
-
-        // Creates new obj
-        var newCollect = {
-          "description": message.text.substring(COMMANDS.collectAdd.length+1, message.text.length)
-        }
-
-        // Retrieves the values
-        db.get(collectStore, function(err, collectObjs){
-          if(err){
-              console.log("GET ERROR: " + err)
-
-              // initializes the collect store
-              initializeStore(collectStore, true, function(){
-                convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
-              })
-
-          }else if(collectObjs){ //
-            // Add a new ideia
-            collectObjs.open.push(newCollect) // Add new collect to store
-
-            // Save file
-            db.save(collectStore, collectObjs, function(err){
-              if(err){
-                convo.say('Hey mate, could you try again there was an error?')
-              }else{
-                changed = true
-                convo.say('Collected with success! New ideia: ' + newCollect.description)
-              }
-            })
-
-          }
-        })
-      })
-
-    }else if(message.text.startsWith(COMMANDS.collectList)){
-
-      bot.startConversation(message,function(err,convo) {
-
-        sendMessageWIPInConv(convo)
-        // Retrieve the data from collect store
-        db.get(collectStore, function(err, collectObjs){
-          if(err){
-            console.log("GET ERROR: " + err)
-
-            // initializes the collect store
-            initializeStore(collectStore, true, function(){
-              convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
-            })
-          }else if(collectObjs){
-            if(collectObjs.open.length == 0){
-              convo.say('Hey dude, I havent found any item in your collect list!')
-              return
-            }
-              // Send message
-              var response = ""
-              var index = 1;
-
-              // Creates the list of items
-              _.forEach(collectObjs.open, function(todo) {
-                response += '`' + index + '` ' + todo.description + '\n'
-                index++;
-              });
-
-              var formatted=   {
-                  "attachments": [
-                      {
-                          "fallback": "Required plain-text summary of the attachment.",
-                          "color": "#36a64f",
-                          "text" : response,
-                          "title": "Your Brilliant Ideas",
-                          "image_url": "http://my-website.com/path/to/image.jpg",
-                          "thumb_url": "http://example.com/path/to/thumb.png",
-                          "mrkdwn_in": ["text"]
-                      },
-                      {
-                          "fallback": "Required plain-text summary of the attachment.",
-                          "color": "#E0E0E0",
-                          "text" : "You can *manage* your collected _items_ by typing `help`, `list`, `add`, `remove` or `clean`.",
-                          "mrkdwn_in": ["text"]
-                      },
-                      {
-                          "fallback": "Required plain-text summary of the attachment.",
-                          "footer": "Get things done and leave your brain in peace.",
-                          "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
-                    }
-                  ]
-              }
-              convo.say(formatted)
-          }
-        })
-      });
-
-
-
-    }else if(message.text.startsWith(COMMANDS.collectRemove)){
-      bot.startConversation(message,function(err,convo) {
-
-        sendMessageWIPInConv(convo)
-
-        // Validate the data
-        if(message.text.length <= (COMMANDS.collectRemove.length+1)){ // collect remove
-          // Send validation message
-          convo.say('Sorry bro, but your message should be like "collect remove 1" (u can see the index using "collect list" message)')
-          return
-
-        }
-
-        var data = message.text.substring((COMMANDS.collectRemove.length+1), message.text.length) // Get the data after the command, eliminates the space
-        var indexes = validateRangeOfNumber(data)
-        if(indexes == null){ // the third parameter have to be an index
-          convo.say('Sorry bro, but you should include the number to remove, like this "collect remove 1" (u can see the index using "collect list" message)')
-          return
-        }
-
-        // Retrieve the data from collect store
-        db.get(collectStore, function(err, collectObjs){
-          if(err){
-            console.log("GET ERROR: " + err)
-            // initializes the collect store
-            initializeStore(collectStore, true, function(){
-              convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
-            })
-          }else if(collectObjs){ //
-
-            // sort the collection from higher to lower
-            var revertedIndexes = _.chain(indexes.map(Number))
-                                      .uniq()
-                                      .sortBy()
-                                      .value()
-                                      .reverse()
-
-            // Iterate throuht objects to remove
-            _.forEach(revertedIndexes, function(index) {
-              console.log("Excluding " + index);
-              if(index > 0 && index <= collectObjs.open.length){
-                console.log('Excluding index: ' + index)
-                collectObjs.open.splice(index-1, 1)
-              }
-            });
-
-            // Save file
-            db.save(collectStore, collectObjs, function(err){
-              if(err){
-                convo.say('Hey mate, could you try again, please? There was an error...')
-              }else{
-                convo.say('Item removed from collect list with success')
-                changed = true
-              }
-            });
-          }
-        })
-      })
-    }else if(message.text.startsWith(COMMANDS.collectClean)){
-      bot.startConversation(message,function(err,convo) {
-
-        sendMessageWIPInConv(convo)
-
-        initializeStore(collectStore, true, () => {
-          convo.say('The collect store cleaned with success.')
-        })
-      })
-    }else if(message.text.startsWith(COMMANDS.collectHelp)){
-      bot.reply(message, "New TODO added!")
-
-    }else if(message.text.startsWith(COMMANDS.todoAdd)){
-      bot.startConversation(message,function(err,convo) {
-
-        sendMessageWIPInConv(convo)
+        mosCommon.sendMessageWIPInConv(convo)
         // Validates the message
         var data = message.text.split(' ')
-        if(message.text.length <= (COMMANDS.todoAdd+1)){ // >= "todo add " = 9 characters
+        if(message.text.length <= (mosCommon.COMMANDS.todoAdd+1)){ // >= "todo add " = 9 characters
           // Send validation message
           convo.say('Sorry bro, but your message should be like todo add "description of your todo" [@user] [priority ****]')
           return
@@ -242,7 +59,7 @@ controller.on('ambient',function(bot,message) {
 
         // Creates new obj
         var newCollect = {
-          "description": message.text.substring((COMMANDS.todoAdd+1), message.text.length)
+          "description": message.text.substring((mosCommon.COMMANDS.todoAdd+1), message.text.length)
         }
 
         // Retrives the values
@@ -252,7 +69,7 @@ controller.on('ambient',function(bot,message) {
               console.log("GET ERROR: " + err)
 
               // initializes the collect store
-              initializeStore(channelStore, false, function(){
+              mosStore.initializeStore(db, channelStore, false, function(){
                 convo.say('Hey mate, could you try again, now there is a place to store your todos!')
               })
 
@@ -274,10 +91,10 @@ controller.on('ambient',function(bot,message) {
         })
       })
 
-    }else if(message.text.startsWith(COMMANDS.todoListDone)){
+    }else if(message.text.startsWith(mosCommon.COMMANDS.todoListDone)){
       bot.startConversation(message,function(err,convo) {
 
-        sendMessageWIPInConv(convo)
+        mosCommon.sendMessageWIPInConv(convo)
 
         // Retrieve the data from collect store
         var channelStore = message.channel
@@ -287,7 +104,7 @@ controller.on('ambient',function(bot,message) {
             console.log("GET ERROR: " + err)
 
             // initializes the collect store
-            initializeStore(channelStore, false, function(){
+            mosStore.initializeStore(db, channelStore, false, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){
@@ -325,10 +142,10 @@ controller.on('ambient',function(bot,message) {
           }
         })
       });
-    }else if(message.text.startsWith((COMMANDS.todoListAll))){
+    }else if(message.text.startsWith((mosCommon.COMMANDS.todoListAll))){
       bot.startConversation(message,function(err,convo) {
 
-        sendMessageWIPInConv(convo)
+        mosCommon.sendMessageWIPInConv(convo)
 
         // Retrieve the data from collect store
         var channelStore = message.channel
@@ -338,7 +155,7 @@ controller.on('ambient',function(bot,message) {
             console.log("GET ERROR: " + err)
 
             // initializes the collect store
-            initializeStore(channelStore, false, function(){
+            mosStore.initializeStore(db, channelStore, false, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){
@@ -404,10 +221,10 @@ controller.on('ambient',function(bot,message) {
           }
         })
       });
-    }else if(message.text.startsWith((COMMANDS.todoList))){
+    }else if(message.text.startsWith((mosCommon.COMMANDS.todoList))){
       bot.startConversation(message,function(err,convo) {
 
-        sendMessageWIPInConv(convo)
+        mosCommon.sendMessageWIPInConv(convo)
 
         // Retrieve the data from collect store
         var channelStore = message.channel
@@ -417,7 +234,7 @@ controller.on('ambient',function(bot,message) {
             console.log("GET ERROR: " + err)
 
             // initializes the collect store
-            initializeStore(channelStore, false, function(){
+            mosStore.initializeStore(db, channelStore, false, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){
@@ -469,21 +286,21 @@ controller.on('ambient',function(bot,message) {
           }
         })
       });
-    }else if(message.text.startsWith(COMMANDS.todoRemove)){
+    }else if(message.text.startsWith(mosCommon.COMMANDS.todoRemove)){
       bot.startConversation(message,function(err,convo) {
 
-        sendMessageWIPInConv(convo)
+        mosCommon.sendMessageWIPInConv(convo)
         // Validate the data
-        if(message.text.length <= (COMMANDS.todoRemove.length+1)){
+        if(message.text.length <= (mosCommon.COMMANDS.todoRemove.length+1)){
           // Send validation message
           convo.say('Sorry bro, but you should include the number to remove, like this "todo remove 1" (u can see the index using "todo list")')
           return
 
         }
 
-        var data = message.text.substring( (COMMANDS.todoRemove.length+1), message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring( (mosCommon.COMMANDS.todoRemove.length+1), message.text.length) // Get the data after the command, eliminates the space
         console.log("DATA: " + data)
-        var indexes = validateRangeOfNumber(data)
+        var indexes = mosCommon.validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
           console.log("Indexes null")
           convo.say('Sorry bro, but you should include the number to remove, like this "todo remove 1" (u can see the index using "todo list")')
@@ -497,7 +314,7 @@ controller.on('ambient',function(bot,message) {
             console.log("GET ERROR: " + err)
 
             // initializes the collect store
-            initializeStore(channelStore, false, function(){
+            mosStore.initializeStore(db, channelStore, false, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){ //
@@ -531,20 +348,20 @@ controller.on('ambient',function(bot,message) {
           }
         })
       })
-    }else if(message.text.startsWith(COMMANDS.todoUnstrike)){
+    }else if(message.text.startsWith(mosCommon.COMMANDS.todoUnstrike)){
       bot.startConversation(message,function(err,convo) {
 
-        sendMessageWIPInConv(convo)
+        mosCommon.sendMessageWIPInConv(convo)
         // Validate the data
-        if(message.text.length <= (COMMANDS.todoUnstrike.length+1)){
+        if(message.text.length <= (mosCommon.COMMANDS.todoUnstrike.length+1)){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "todo unstrike 1" (u can see the index using "todo list")')
           return
         }
 
-        var data = message.text.substring((COMMANDS.todoUnstrike.length+1), message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring((mosCommon.COMMANDS.todoUnstrike.length+1), message.text.length) // Get the data after the command, eliminates the space
         console.log("DATA: " + data)
-        var indexes = validateRangeOfNumber(data)
+        var indexes = mosCommon.validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
           console.log("Indexes null")
           convo.say('Sorry bro, but your message should be like "todo unstrike 1" (u can see the index using "todo list")')
@@ -558,7 +375,7 @@ controller.on('ambient',function(bot,message) {
             console.log("GET ERROR: " + err)
 
             // initializes the collect store
-            initializeStore(channelStore, false, function(){
+            mosStore.initializeStore(db, channelStore, false, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){ //
@@ -595,20 +412,20 @@ controller.on('ambient',function(bot,message) {
         })
       })
 
-    }else if(message.text.startsWith(COMMANDS.todoStrike)){
+    }else if(message.text.startsWith(mosCommon.COMMANDS.todoStrike)){
       bot.startConversation(message,function(err,convo) {
 
-        sendMessageWIPInConv(convo)
+        mosCommon.sendMessageWIPInConv(convo)
         // Validate the data
-        if(message.text.length <= (COMMANDS.todoStrike.length+1)){
+        if(message.text.length <= (mosCommon.COMMANDS.todoStrike.length+1)){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "todo strike 1" (u can see the index using "todo list")')
           return
         }
 
-        var data = message.text.substring((COMMANDS.todoStrike.length+1), message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring((mosCommon.COMMANDS.todoStrike.length+1), message.text.length) // Get the data after the command, eliminates the space
         console.log("DATA: " + data)
-        var indexes = validateRangeOfNumber(data)
+        var indexes = mosCommon.validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
           console.log("Indexes null")
           convo.say('Sorry bro, but your message should be like "todo strike 1" (u can see the index using "todo list")')
@@ -621,8 +438,8 @@ controller.on('ambient',function(bot,message) {
           if(err){
             console.log("GET ERROR: " + err)
 
-            // initializes the collect store
-            initializeStore(channelStore, false, function(){
+            // mosStore.initializes the collect store
+            mosStore.initializeStore(db, channelStore, false, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){ //
@@ -658,21 +475,21 @@ controller.on('ambient',function(bot,message) {
           }
         })
       })
-    }else if(message.text.startsWith(COMMANDS.todoDone)){
+    }else if(message.text.startsWith(mosCommon.COMMANDS.todoDone)){
 
       bot.startConversation(message,function(err,convo) {
 
-        sendMessageWIPInConv(convo)
+        mosCommon.sendMessageWIPInConv(convo)
         // Validate the data
-        if(message.text.length <= (COMMANDS.todoDone.length+1)){
+        if(message.text.length <= (mosCommon.COMMANDS.todoDone.length+1)){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "todo done 1" (u can see the index using "todo list")')
           return
         }
 
-        var data = message.text.substring((COMMANDS.todoDone.length+1), message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring((mosCommon.COMMANDS.todoDone.length+1), message.text.length) // Get the data after the command, eliminates the space
         console.log("DATA: " + data)
-        var indexes = validateRangeOfNumber(data)
+        var indexes = mosCommon.validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
           console.log("Indexes null")
           convo.say('Sorry bro, but your message should be like "todo done 1" (u can see the index using "todo list")')
@@ -685,8 +502,8 @@ controller.on('ambient',function(bot,message) {
           if(err){
             console.log("GET ERROR: " + err)
 
-            // initializes the collect store
-            initializeStore(channelStore, false, function(){
+            // mosStore.initializes the collect store
+            mosStore.initializeStore(db, channelStore, false, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){ //
@@ -722,30 +539,30 @@ controller.on('ambient',function(bot,message) {
         })
       })
 
-    }else if(message.text.startsWith(COMMANDS.todoClean)){
+    }else if(message.text.startsWith(mosCommon.COMMANDS.todoClean)){
       bot.startConversation(message,function(err,convo) {
 
-        sendMessageWIPInConv(convo)
+        mosCommon.sendMessageWIPInConv(convo)
         var channelStore = message.channel
-        initializeStore(channelStore, false, () => {
+        mosStore.initializeStore(db, channelStore, false, () => {
           convo.say('The channel store cleaned with success.')
           changed = true
         })
       })
-    }else if(message.text.startsWith(COMMANDS.todoPrioritize)){
+    }else if(message.text.startsWith(mosCommon.COMMANDS.todoPrioritize)){
       bot.startConversation(message,function(err,convo) {
 
-        sendMessageWIPInConv(convo)
+        mosCommon.sendMessageWIPInConv(convo)
         // Validate the data
-        if(message.text.length <= (COMMANDS.todoPrioritize.length +1)){
+        if(message.text.length <= (mosCommon.COMMANDS.todoPrioritize.length +1)){
           // Send validation message
           convo.say('Sorry bro, but your message should be like "todo prioritize 5,1,3," (u can see the index using "todo list")')
           return
         }
 
-        var data = message.text.substring((COMMANDS.todoPrioritize.length +1), message.text.length) // Get the data after the command, eliminates the space
+        var data = message.text.substring((mosCommon.COMMANDS.todoPrioritize.length +1), message.text.length) // Get the data after the command, eliminates the space
         console.log("DATA: " + data)
-        var indexes = validateRangeOfNumber(data)
+        var indexes = mosCommon.validateRangeOfNumber(data)
         if(indexes == null){ // the third parameter have to be an index
           console.log("Indexes null")
           convo.say('Sorry bro, but your message should be like "todo doprioritizene 1" (u can see the index using "todo list")')
@@ -758,8 +575,8 @@ controller.on('ambient',function(bot,message) {
           if(err){
             console.log("GET ERROR: " + err)
 
-            // initializes the collect store
-            initializeStore(channelStore, false, function(){
+            // mosStore.initializes the collect store
+            mosStore.initializeStore(db, channelStore, false, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your todos!')
             })
           }else if(todosObj){ //
@@ -813,7 +630,7 @@ controller.on('ambient',function(bot,message) {
         })
       })
 
-    }else if(message.text.startsWith(COMMANDS.todoHelp)){
+    }else if(message.text.startsWith(mosCommon.COMMANDS.todoHelp)){
       bot.reply(message, "TODO help!")
     }
 
@@ -823,132 +640,49 @@ controller.on('ambient',function(bot,message) {
 // EVENTS HANDLERS
 controller.on('channel_created', function(bot, message) {
 
-  initializeStore(message.channel.id, false)
-
-  inviteAllUsersToChannel(message.channel.id)
+  mosStore.initializeStore(db, message.channel.id, false)
+  mosCommon.inviteAllUsersToChannel(message.channel.id)
 
 });
 
 controller.on('channel_deleted', function(bot, message) {
-  deleteStore(message.channel)
+  mosStore.deleteStore(message.channel)
 });
 
 
-// BOT MESSAGES
-controller.hears(['shutdown'], 'direct_message,direct_mention,mention', function(bot, message) {
-
-    bot.startConversation(message, function(err, convo) {
-
-        convo.ask('Are you sure you want me to shutdown?', [
-            {
-                pattern: bot.utterances.yes,
-                callback: function(response, convo) {
-                    convo.say('Bye!');
-                    convo.next();
-                    setTimeout(function() {
-                        process.exit();
-                    }, 3000);
-                }
-            },
-        {
-            pattern: bot.utterances.no,
-            default: true,
-            callback: function(response, convo) {
-                convo.say('*Phew!*');
-                convo.next();
-            }
-        }
-        ]);
-    });
+// COLLECT COMMANDS FOR MORPHEUS
+controller.hears([mosCommon.COMMANDS.collectList],'direct_message,direct_mention,mention', function(bot, message) {
+  mosColl.collectList(bot, message, db)
 });
 
+controller.hears([mosCommon.COMMANDS.collectAdd],'direct_message,direct_mention,mention', function(bot, message) {
+  mosColl.collectAdd(bot, message, db)
+});
+
+controller.hears([mosCommon.COMMANDS.collectRemove],'direct_message,direct_mention,mention', function(bot, message) {
+  mosColl.collectRemove(bot, message, db)
+});
+
+controller.hears([mosCommon.COMMANDS.collectClean],'direct_message,direct_mention,mention', function(bot, message) {
+  mosColl.collectClean(bot, message, db)
+});
+
+controller.hears([mosCommon.COMMANDS.collectHelp],'direct_message,direct_mention,mention', function(bot, message) {
+  mosColl.collectHelp(bot, message)
+});
+
+
+// COLLECT COMMANDS FOR MORPHEUS
 
 controller.hears(['uptime', 'identify yourself', 'who are you', 'what is your name'],
-    'direct_message,direct_mention,mention', function(bot, message) {
-        mos.uptime(bot, message)
-    });
+                          'direct_message,direct_mention,mention', function(bot, message) {
+  mos.uptime(bot, message)
+});
 
+controller.hears(['shutdown'], 'direct_message,direct_mention,mention', function(bot, message) {
+  mos.shutdown(bot, message)
+})
 
-// FUNCTIONS
-var validateRangeOfNumber = value => {
-  console.log("VALIDATE " + value)
-  console.log(value.split(' '))
-  if(regComma.test(value))
-    return value.split(',')
-  if(regSpace.test(value))
-    return value.trim().split(' ')
-
-  return null;
-}
-
-var deleteStore = function (storeName, callback){
-  // delete by ID
-  db.delete(storeName, function(err){
-    if(err){
-      console.log('Error trying to delete store: ' +storeName)
-      console.log(err)
-    }else{
-      console.log('The store ' + storeName + '.json was deleted with success. ')
-      changed = true
-
-      if(callback)
-        callback()
-    }
-  });
-}
-
-
-var initializeStore = function (storeName, collectStore, callback){
-  var storage
-  if(collectStore){ // Collect Store does not need done array
-    storage = {
-        "open": []
-      }
-  }else{
-    storage = {
-        "open": [],
-        "done": []
-      }
-  }
-
-  // save with custom ID
-  db.save(storeName, storage, function(err){
-    console.log('The storage ' + storeName + '.json was initialized with success. ')
-    changed = true
-    if(callback)
-      callback()
-  });
-
-}
-
-var sendMessageWIPInConv = function(convo){
-  convo.say("Working on your request...")
-}
-
-var inviteAllUsersToChannel = (channelId) => {
-  request.post({ url: 'https://slack.com/api/users.list', form: { token: process.env.slacktoken} }, function(err, res, body) {
-    var bodyjson = eval('(' + body + ')')
-
-    var members = bodyjson.members
-
-    _.each(members, function(member) {
-      request.post({ url: 'https://slack.com/api/channels.invite', form: { token: process.env.slacktokenadmin, channel: channelId, user: member.id} },
-        function(err, res, body) {
-          bot.say(
-            {
-                text: 'Invinting ' + member.real_name + ' to join the Channel',
-                channel: channelId
-            }
-          );
-        })
-    });
-  });
-}
 
 // Backup routine
-setInterval(function(){
-  if(changed){
-    mos.backupRoutine()
-    changed = false // Stops backing up until next change
-  }
-}, 1800000); // every 30 min
+mos.startBackupRoutine()
