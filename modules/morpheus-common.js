@@ -1,4 +1,5 @@
 var request = require('request')
+var _         = require('lodash')
 
 // Regex Validation
 var regComma = new RegExp('^(?!,)(,?[0-9]+)+$')
@@ -13,8 +14,8 @@ var morpheusCommon =  {
       collectClean    : 'collect clean',
       collectHelp     : 'collect help',
 
-      todoList        : 'todo list',
-      todoListAll     : 'todo list all',
+      todoList        : 'todo list',        // list #channel
+      todoListAll     : 'todo list all',    // list all #channel
       todoListDone    : 'todo list done',
       todoAdd         : 'todo add',
       todoRemove      : 'todo remove',
@@ -24,9 +25,25 @@ var morpheusCommon =  {
       todoDone        : 'todo done',
       todoPrioritize  : 'todo prioritize',
       todoHelp        : 'todo help'
+      // Todo Conversation
+      // 1) todo
+          // What is the channel?
+          //  -> Brings the list of todos
+          // What do you want?
+            // commands
+            // End of the conversation
+     //  2) todo #channel
+          //  -> Brings the list of todos
+          // What do you want?
+            // commands
+            // End of the conversation
+
+
   },
 
   COLLECT_STORE_NAME : "collect" ,
+
+  LIST_OF_CHANNELS : {},
 
   sendMessageWIPInConv : function(convo){
     convo.say("Working on your request...")
@@ -61,6 +78,40 @@ var morpheusCommon =  {
           })
       })
     })
+  },
+
+  retrieveListOfActiveChannels : () => {
+    request.post({ url: 'https://slack.com/api/channels.list', form: { token: process.env.slacktoken, exclude_archived: true, exclude_members: true}},
+    function(err, res, body) {
+
+      var bodyjson = eval('(' + body + ')')
+
+      morpheusCommon.LIST_OF_CHANNELS = bodyjson.channels
+
+    })
+  },
+
+  extractChannel : (message) => {
+    var channel
+    if(message){
+      console.log("MESSAGE: " + message)
+      message = message.trim()
+      channel = message.substring(message.lastIndexOf("#")+1, message.length);
+      channel = channel.substring(channel.indexOf("|"),0);
+    }
+    return channel.trim()
+  },
+
+  isChannelValid : (channel) => {
+    var valid = false
+    _.each(morpheusCommon.LIST_OF_CHANNELS, function(channelObj) {
+      console.log(channelObj.name + " " + channelObj.id +" == " + channel + "\n")
+      if(channelObj.id === channel){
+        valid = true
+        return false // gets out of each
+      }
+    })
+    return valid
   }
 
 }

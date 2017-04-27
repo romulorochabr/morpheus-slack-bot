@@ -1,23 +1,21 @@
-var mosStore = require('./morpheus-store.js')
-var mosCommon = require('./morpheus-common.js')
+var morStore = require('./morpheus-store.js')
+var morCommon = require('./morpheus-common.js')
 var _       = require('lodash')
-
-//var COLLECT_STORE_NAME = "collect"
 
 var morpheusColl =  {
   collectList: (bot , message, db) => {
 
     bot.startConversation(message,function(err,convo) {
 
-      mosCommon.sendMessageWIPInConv(convo)
+      morCommon.sendMessageWIPInConv(convo)
 
       // Retrieve the data from collect store
-      db.get(mosCommon.COLLECT_STORE_NAME, function(err, collectObjs){
+      db.get(morCommon.COLLECT_STORE_NAME, function(err, collectObjs){
         if(err){
           console.log("GET ERROR: " + err)
 
           // initializes the collect store
-          mosStore.initializeStore(db, mosCommon.COLLECT_STORE_NAME, true, function(){
+          morStore.initializeStore(db, morCommon.COLLECT_STORE_NAME, true, function(){
             convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
           })
         }else if(collectObjs){
@@ -68,9 +66,9 @@ var morpheusColl =  {
   collectAdd : (bot , message, db) => {
     bot.startConversation(message,function(err,convo) {
 
-      mosCommon.sendMessageWIPInConv(convo)
+      morCommon.sendMessageWIPInConv(convo)
       // Validates the message
-      if(message.text.length <= (mosCommon.COMMANDS.collectAdd.length+1)){ // >= "collect add " = 12 characters
+      if(message.text.length <= (morCommon.COMMANDS.collectAdd.length+1)){ // >= "collect add " = 12 characters
         // Send validation message
         convo.say('Sorry bro, but your message should be like collect add "description of your todo" [@user] [priority ****]')
         return
@@ -78,16 +76,16 @@ var morpheusColl =  {
 
       // Creates new obj
       var newCollect = {
-        "description": message.text.substring(mosCommon.COMMANDS.collectAdd.length+1, message.text.length)
+        "description": message.text.substring(morCommon.COMMANDS.collectAdd.length+1, message.text.length)
       }
 
       // Retrieves the values
-      db.get(mosCommon.COLLECT_STORE_NAME, function(err, collectObjs){
+      db.get(morCommon.COLLECT_STORE_NAME, function(err, collectObjs){
         if(err){
             console.log("GET ERROR: " + err)
 
             // initializes the collect store
-            mosStore.initializeStore(db, collectStore, true, function(){
+            morStore.initializeStore(db, collectStore, true, function(){
               convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
             })
 
@@ -96,7 +94,7 @@ var morpheusColl =  {
           collectObjs.open.push(newCollect) // Add new collect to store
 
           // Save file
-          db.save(mosCommon.COLLECT_STORE_NAME, collectObjs, function(err){
+          db.save(morCommon.COLLECT_STORE_NAME, collectObjs, function(err){
             if(err){
               convo.say('Hey mate, could you try again there was an error?')
             }else{
@@ -113,28 +111,28 @@ var morpheusColl =  {
   collectRemove : (bot , message, db) => {
     bot.startConversation(message,function(err,convo) {
 
-      mosCommon.sendMessageWIPInConv(convo)
+      morCommon.sendMessageWIPInConv(convo)
 
       // Validate the data
-      if(message.text.length <= (mosCommon.COMMANDS.collectRemove.length+1)){ // collect remove
+      if(message.text.length <= (morCommon.COMMANDS.collectRemove.length+1)){ // collect remove
         // Send validation message
         convo.say('Sorry bro, but your message should be like "collect remove 1" (u can see the index using "collect list" message)')
         return
       }
 
-      var data = message.text.substring((mosCommon.COMMANDS.collectRemove.length+1), message.text.length) // Get the data after the command, eliminates the space
-      var indexes = mosCommon.validateRangeOfNumber(data)
+      var data = message.text.substring((morCommon.COMMANDS.collectRemove.length+1), message.text.length) // Get the data after the command, eliminates the space
+      var indexes = morCommon.validateRangeOfNumber(data)
       if(indexes == null){ // the third parameter have to be an index
         convo.say('Sorry bro, but you should include the number to remove, like this "collect remove 1" (u can see the index using "collect list" message)')
         return
       }
 
       // Retrieve the data from collect store
-      db.get(mosCommon.COLLECT_STORE_NAME, function(err, collectObjs){
+      db.get(morCommon.COLLECT_STORE_NAME, function(err, collectObjs){
         if(err){
           console.log("GET ERROR: " + err)
           // initializes the collect store
-          mosStore.initializeStore(db, mosCommon.COLLECT_STORE_NAME, true, function(){
+          morStore.initializeStore(db, morCommon.COLLECT_STORE_NAME, true, function(){
             convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
           })
         }else if(collectObjs){ //
@@ -156,7 +154,7 @@ var morpheusColl =  {
           });
 
           // Save file
-          db.save(mosCommon.COLLECT_STORE_NAME, collectObjs, function(err){
+          db.save(morCommon.COLLECT_STORE_NAME, collectObjs, function(err){
             if(err){
               convo.say('Hey mate, could you try again, please? There was an error...')
             }else{
@@ -172,9 +170,9 @@ var morpheusColl =  {
   collectClean : (bot , message, db) => {
     bot.startConversation(message,function(err,convo) {
 
-      mosCommon.sendMessageWIPInConv(convo)
+      morCommon.sendMessageWIPInConv(convo)
 
-      mosStore.initializeStore(db, mosCommon.COLLECT_STORE_NAME, true, () => {
+      morStore.initializeStore(db, morCommon.COLLECT_STORE_NAME, true, () => {
         convo.say('The collect store cleaned with success.')
       })
     })
