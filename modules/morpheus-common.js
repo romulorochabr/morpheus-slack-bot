@@ -14,8 +14,8 @@ var morpheusCommon =  {
       collectClean    : 'collect clean',
       collectHelp     : 'collect help',
 
-      todoList        : 'todo list',        // list #channel
-      todoListAll     : 'todo list all',    // list all #channel
+      todoList        : 'todo list',
+      todoListAll     : 'todo list all',
       todoListDone    : 'todo list done',
       todoAdd         : 'todo add',
       todoRemove      : 'todo remove',
@@ -24,20 +24,8 @@ var morpheusCommon =  {
       todoUnstrike    : 'todo unstrike',
       todoDone        : 'todo done',
       todoPrioritize  : 'todo prioritize',
-      todoHelp        : 'todo help'
-      // Todo Conversation
-      // 1) todo
-          // What is the channel?
-          //  -> Brings the list of todos
-          // What do you want?
-            // commands
-            // End of the conversation
-     //  2) todo #channel
-          //  -> Brings the list of todos
-          // What do you want?
-            // commands
-            // End of the conversation
-
+      todoHelp        : 'todo help',
+      todo            : 'todo'
 
   },
 

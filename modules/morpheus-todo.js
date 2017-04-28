@@ -737,6 +737,34 @@ var morpheusTodo =  {
 
   todoHelp : (bot , message, db) => {
     bot.reply(message, "Not implemented yet. Sorry!")
+  },
+
+  todo : (bot , message) => {
+    console.log("GOT TO TODO")
+    bot.startConversation(message,function(err,convo) {
+      var formatted = {
+            "text": "It's time to nominate the channel of the week",
+            "response_type": "in_channel",
+            "attachments": [
+                {
+                    "fallback": "Upgrade your Slack client to use messages like these.",
+                    "color": "#3AA3E3",
+                    "attachment_type": "default",
+                    "callback_id": "select_simple_1234",
+                    "actions": [
+                {
+                    "name": "channels_list",
+                    "text": "Which channel changed your life this week?",
+                    "type": "select",
+                    "data_source": "channels"
+                }
+              ]
+            }
+          ]
+        }
+      convo.say(formatted)
+    })
+
   }
 }
 

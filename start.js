@@ -106,6 +106,10 @@ controller.hears([morCommon.COMMANDS.todoHelp],'direct_message,direct_mention,me
   morTodo.todoHelp(bot, message, db)
 })
 
+controller.hears([morCommon.COMMANDS.todo],'direct_message,direct_mention,mention', function(bot, message) {
+  morTodo.todo(bot, message)
+})
+
 // TODO COMMANDS FOR MORPHEUS - END
 
 controller.hears(['uptime', 'identify yourself', 'who are you', 'what is your name'],
