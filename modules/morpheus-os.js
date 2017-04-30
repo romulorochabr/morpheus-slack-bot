@@ -2,6 +2,8 @@ var os      = require('os')
 var fs      = require('fs-extra')
 
 var morpheusos =  {
+  dataHasChanged : false,
+  
   uptime: (bot , message) => {
     var hostname = os.hostname();
     var uptime = morpheusos.formatUpTime(process.uptime());
@@ -40,9 +42,10 @@ var morpheusos =  {
 
   startBackupRoutine : () => {
     setInterval(function(){
-      if(changed){
+	  console.log("BAKCUP ROTINE TRIGGERED")
+      if(morpheusos.dataHasChanged){
         morpheusos.backup()
-        changed = false // Stops backing up until next change
+        morpheusos.dataHasChanged = false // Stops backing up until next change
       }
     }, 1800000); // every 30 min
   },

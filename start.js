@@ -20,7 +20,6 @@ var morTodo   = require('./modules/morpheus-todo.js')
 
 var db          = new Store("data",{pretty:true})
 var controller  = Botkit.slackbot({debug: true})
-var changed     = false // Allow backup rotine know if it is doing to backup or not
 
 var bot = controller.spawn({
     token: process.env.slacktoken

@@ -1,3 +1,5 @@
+var morOs     = require('./morpheus-os.js')
+
 var morpheusStore =  {
   deleteStore : function (db, storeName, callback){
     // delete by ID
@@ -7,7 +9,7 @@ var morpheusStore =  {
         console.log(err)
       }else{
         console.log('The store ' + storeName + '.json was deleted with success. ')
-        changed = true
+        morOs.dataHasChanged = true
 
         if(callback)
           callback()
@@ -31,7 +33,7 @@ var morpheusStore =  {
     // save with custom ID
     db.save(storeName, storage, function(err){
       console.log('The storage ' + storeName + '.json was initialized with success. ')
-      changed = true
+      morOs.dataHasChanged = true
       if(callback)
         callback()
     })
