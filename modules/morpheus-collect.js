@@ -3,63 +3,59 @@ var morCommon = require('./morpheus-common.js')
 var _       = require('lodash')
 
 var morpheusColl =  {
-  collectList: (bot , message, db) => {
+  collectList: (bot , message, db, convo) => {
+    morCommon.sendMessageWIPInConv(convo)
 
-    bot.startConversation(message,function(err,convo) {
+    // Retrieve the data from collect store
+    db.get(morCommon.COLLECT_STORE_NAME, function(err, collectObjs){
+      if(err){
+        console.log("GET ERROR: " + err)
 
-      morCommon.sendMessageWIPInConv(convo)
-
-      // Retrieve the data from collect store
-      db.get(morCommon.COLLECT_STORE_NAME, function(err, collectObjs){
-        if(err){
-          console.log("GET ERROR: " + err)
-
-          // initializes the collect store
-          morStore.initializeStore(db, morCommon.COLLECT_STORE_NAME, true, function(){
-            convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
-          })
-        }else if(collectObjs){
-          if(collectObjs.open.length == 0){
-            convo.say('Hey dude, I havent found any item in your collect list!')
-            return
-          }
-            // Send message
-            var response = ""
-            var index = 1;
-
-            // Creates the list of items
-            _.forEach(collectObjs.open, function(todo) {
-              response += '`' + index + '` ' + todo.description + '\n'
-              index++;
-            });
-
-            var formatted=   {
-                "attachments": [
-                    {
-                        "fallback": "Required plain-text summary of the attachment.",
-                        "color": "#36a64f",
-                        "text" : response,
-                        "title": "Your Brilliant Ideas",
-                        "image_url": "http://my-website.com/path/to/image.jpg",
-                        "thumb_url": "http://example.com/path/to/thumb.png",
-                        "mrkdwn_in": ["text"]
-                    },
-                    {
-                        "fallback": "Required plain-text summary of the attachment.",
-                        "color": "#E0E0E0",
-                        "text" : "You can *manage* your collected _items_ by typing `help`, `list`, `add`, `remove` or `clean`.",
-                        "mrkdwn_in": ["text"]
-                    },
-                    {
-                        "fallback": "Required plain-text summary of the attachment.",
-                        "footer": "Get things done and leave your brain in peace.",
-                        "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
-                  }
-                ]
-            }
-            convo.say(formatted)
+        // initializes the collect store
+        morStore.initializeStore(db, morCommon.COLLECT_STORE_NAME, true, function(){
+          convo.say('Hey mate, could you try again, now there is a place to store your ideas!')
+        })
+      }else if(collectObjs){
+        if(collectObjs.open.length == 0){
+          convo.say('Hey dude, I havent found any item in your collect list!')
+          return
         }
-      })
+          // Send message
+          var response = ""
+          var index = 1;
+
+          // Creates the list of items
+          _.forEach(collectObjs.open, function(todo) {
+            response += '`' + index + '` ' + todo.description + '\n'
+            index++;
+          });
+
+          var formatted=   {
+              "attachments": [
+                  {
+                      "fallback": "Your Brilliant Ideas.",
+                      "color": "#36a64f",
+                      "text" : response,
+                      "title": "Your Brilliant Ideas",
+                      "image_url": "http://my-website.com/path/to/image.jpg",
+                      "thumb_url": "http://example.com/path/to/thumb.png",
+                      "mrkdwn_in": ["text"]
+                  },
+                  {
+                      "fallback": "Required plain-text summary of the attachment.",
+                      "color": "#E0E0E0",
+                      "text" : "You can *manage* your collected _items_ by typing `help`, `list`, `add`, `remove` or `clean`.",
+                      "mrkdwn_in": ["text"]
+                  },
+                  {
+                      "fallback": "Required plain-text summary of the attachment.",
+                      "footer": "Get things done and leave your brain in peace.",
+                      "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
+                }
+              ]
+          }
+          convo.say(formatted)
+      }
     })
   },
 
@@ -180,6 +176,97 @@ var morpheusColl =  {
 
   collectHelp : (bot , message) => {
     bot.reply(message, "Not implemented yet. Sorry!")
+  },
+
+  collect : (bot , message, db) => {
+    bot.createConversation(message, function(err, convo) {
+
+        convo.setTimeout(120000)
+
+        convo.addMessage('I have to go! Call me again if you need!','list'); // TODO - TESTING
+
+        convo.addMessage('I have to go! Call me again if you need!','timeout');
+
+        convo.addMessage({
+            text: 'I do not understand that yet. What a shame...',
+            action:'default'
+        },'bad_response');
+
+
+        var conversationFlow = [
+            {
+                pattern: 'list',
+                callback: function(response, convo) {
+                    console.log("LIST TRIGGERED")
+                    //morpheusColl.collectList(bot , message, db, convo, () => { convo.next() }) // true is to execute convo.gotoThread('anythingElse');
+                    //convo.say('List called')
+                    //convo.next()
+                    convo.gotoThread('list');
+                },
+            },
+            {
+                pattern: 'done',
+                callback: function(response, convo) {
+                    convo.say('Bye bye. See u next time.');
+                    convo.next('completed');
+                },
+            },
+            {
+                default: true,
+                callback: function(response, convo) {
+                    convo.gotoThread('bad_response');
+                },
+            }
+        ]
+
+        var firstQuestion=   {
+            "attachments": [
+                {
+                    "fallback": "What do you want from me?",
+                    "color": "#36a64f",
+                    "text" : "What do you want from me? You can say `help`, `list`, `add`, `remove`, `clean` or `done`.",
+                    "image_url": "http://my-website.com/path/to/image.jpg",
+                    "thumb_url": "http://example.com/path/to/thumb.png",
+                    "mrkdwn_in": ["text"]
+                }
+            ]
+        }
+
+        var secondQuestion=   {
+            "attachments": [
+                {
+                    "fallback": "Anything else?",
+                    "color": "#36a64f",
+                    "text" : "Anything else? Just say `help`, `list`, `add`, `remove`, `clean` or `done`.",
+                    "image_url": "http://my-website.com/path/to/image.jpg",
+                    "thumb_url": "http://example.com/path/to/thumb.png",
+                    "mrkdwn_in": ["text"]
+                }
+            ]
+        }
+
+
+        convo.addQuestion(firstQuestion, conversationFlow, {});
+
+        convo.addQuestion(secondQuestion, conversationFlow, {});
+
+
+
+        convo.on('end',function(convo) {
+          console.log("END OF CONVERSATION")
+          console.log(convo.status)
+        });
+
+        convo.activate();
+
+        convo.beforeThread('list', function(convo, next) {
+          console.log("DID SOMETHING BEFORE LIST")
+//          convo.say("Did something before list")
+          next()
+
+        })
+
+    });
   }
 
 }

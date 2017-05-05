@@ -16,13 +16,6 @@ IMPROVEMENTS
     // what is the todo
     // Who is going to do it?
 
-// Code using conversations starting with collect and todo direct messages to morpheus
-      Start a conversation and boot show the channels and from that do the commands
-      Design the conversation between morpheus and the person
-        collect -> Start a conversation
-        todo -> Ask firtly for the channels
-        both could start a conversation if some part of the command is lacking
-
 
 ========================== FUTURE ========================
 ********* RELEASE 0.4 **********

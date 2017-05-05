@@ -41,7 +41,9 @@ controller.on('channel_deleted', function(bot, message) {
 
 // COLLECT COMMANDS FOR MORPHEUS - BEGIN
 controller.hears([morCommon.COMMANDS.collectList],'direct_message,direct_mention,mention', function(bot, message) {
-  morColl.collectList(bot, message, db)
+  bot.startConversation(message,function(err,convo) {
+      morColl.collectList(bot , message, db, convo)
+  })
 })
 
 controller.hears([morCommon.COMMANDS.collectAdd],'direct_message,direct_mention,mention', function(bot, message) {
@@ -59,6 +61,11 @@ controller.hears([morCommon.COMMANDS.collectClean],'direct_message,direct_mentio
 controller.hears([morCommon.COMMANDS.collectHelp],'direct_message,direct_mention,mention', function(bot, message) {
   morColl.collectHelp(bot, message)
 })
+
+controller.hears([morCommon.COMMANDS.collect],'direct_message,direct_mention,mention', function(bot, message) {
+  morColl.collect(bot, message, db)
+})
+
 // COLLECT COMMANDS FOR MORPHEUS - END
 
 // Todos COMMANDS FOR MORPHEUS - BEGIN

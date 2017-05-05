@@ -13,6 +13,7 @@ var morpheusCommon =  {
       collectRemove   : 'collect remove',
       collectClean    : 'collect clean',
       collectHelp     : 'collect help',
+      collect         : 'collect',
 
       todoList        : 'todo list',
       todoListAll     : 'todo list all',
